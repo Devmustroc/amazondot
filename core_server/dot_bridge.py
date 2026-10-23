@@ -49,9 +49,10 @@ class DotBridge:
                 stderr=subprocess.DEVNULL,
                 check=True
             )
-            cmd = f"su -c 'tinyplay {remote_wav} -D 0 -d 0 2>/dev/null || tinyplay {remote_wav} -D 0 -d 23'"
+            # Use TadPlayer DEX which plays via Android MediaPlayer (AudioFlinger / FastMixer)
+            play_cmd = f"CLASSPATH=/data/local/tmp/tad_player.jar app_process / com.tad.Player {remote_wav}"
             subprocess.run(
-                ["adb", "-s", f"{self.host}:5555", "shell", cmd],
+                ["adb", "-s", f"{self.host}:5555", "shell", play_cmd],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=True

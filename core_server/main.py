@@ -129,8 +129,9 @@ class TadAssistant:
         logger.info("Assistant reply: '%s'", reply_text)
         wav_bytes = await self.brain.synthesize_speech(reply_text)
         if wav_bytes:
-            self.bridge.set_led("zzz_turbo-boost", brightness=90)
+            self.bridge.set_led("solid_cyan", brightness=90)
             self.bridge.play_audio(wav_bytes)
+            self.bridge.set_led("solid_green", brightness=50)
 
     async def handle_voice_query(self, mic_sock):
         """Records voice query until silence is detected, processes it, and replies."""
