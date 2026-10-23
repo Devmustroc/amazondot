@@ -68,9 +68,9 @@ class AudioProcessor:
         acc = np.zeros(num_frames, dtype=np.float32)
         for ch in range(7):
             offset = ch * 3
-            b0 = np.frombuffer(frame_chunk[offset::27], dtype=np.uint8)
-            b1 = np.frombuffer(frame_chunk[offset+1::27], dtype=np.int8)
-            acc += ((b1.astype(np.int16) << 8) | b0.astype(np.int16)).astype(np.float32)
+            b1 = np.frombuffer(frame_chunk[offset+1::27], dtype=np.uint8)
+            b2 = np.frombuffer(frame_chunk[offset+2::27], dtype=np.int8)
+            acc += ((b2.astype(np.int16) << 8) | b1.astype(np.int16)).astype(np.float32)
 
         mono_float = acc / 7.0
         # High-pass filter (150Hz cutoff)
