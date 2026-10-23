@@ -1,0 +1,7 @@
+# MediaTek MT8163 (Echo Dot 2nd Gen - biscuit) Bootrom / Preloader / Fastboot / ADB
+SUBSYSTEM=="usb", ATTR{idVendor}=="0e8d", MODE="0666", GROUP="devmust"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0e8d", MODE="0666", GROUP="devmust"
+
+# Android / Amazon ADB & Fastboot
+SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", MODE="0666", GROUP="devmust"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1949", MODE="0666", GROUP="devmust"
