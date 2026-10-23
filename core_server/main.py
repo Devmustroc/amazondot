@@ -88,30 +88,38 @@ class TadAssistant:
                     silence_frames += 1
                     speech_candidate.extend(chunk_1280.tobytes())
 
-                # If speech finished or accumulated 2.5 seconds
-                if len(speech_candidate) >= 8000 and (silence_frames >= 4 or len(speech_candidate) >= 40000):
+                # If speech finished (silence detected) or maximum duration reached (~2.5s)
+                if len(speech_candidate) > 0 and (silence_frames >= 4 or len(speech_candidate) >= 40000):
                     cand_bytes = bytes(speech_candidate)
                     speech_candidate.clear()
                     silence_frames = 0
+                    try:
+                        self.processor.vad.reset_states()
+                    except Exception:
+                        pass
 
-                    text = self.brain.transcribe(cand_bytes)
-                    text_lower = text.lower()
-                    matched = any(w in text_lower for w in config.WAKE_WORDS)
+                    # Only transcribe if candidate is at least 300ms (4800 samples = 9600 bytes)
+                    if len(cand_bytes) >= 9600:
+                        text = self.brain.transcribe(cand_bytes)
+                        text_lower = text.lower()
+                        logger.info("Candidate speech heard: '%s'", text)
+                        
+                        wake_terms = ["régis", "regis", "régi", "regisse", "alexa"]
+                        matched = any(w in text_lower for w in wake_terms)
 
-                    if matched:
-                        logger.info(">>> WAKE WORD DETECTED: '%s'! Raw heard: '%s'", config.ASSISTANT_NAME, text)
-                        import re
-                        query = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|regisse|alexa)[,\s\.]*', '', text, flags=re.I).strip()
-                        if query:
-                            # Direct command in same sentence (e.g. "Régis, quelle heure est-il ?")
-                            await self.process_and_reply(query)
-                        else:
-                            # Wake word alone ("Régis") -> enter listening mode
-                            await self.handle_voice_query(mic_sock)
+                        if matched:
+                            logger.info(">>> WAKE WORD DETECTED: '%s'! Full phrase: '%s'", config.ASSISTANT_NAME, text)
+                            query = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|r[ée]gi|regisse|alexa)[,\s\.]*', '', text, flags=re.I).strip()
+                            if len(query) >= 3:
+                                # Direct command in same sentence (e.g. "Régis, quelle heure est-il ?")
+                                await self.process_and_reply(query)
+                            else:
+                                # Wake word alone ("Régis") -> enter listening mode
+                                await self.handle_voice_query(mic_sock)
 
-                        buffer_mono.clear()
-                        self.bridge.set_led("solid_green", brightness=50)
-                        break
+                            buffer_mono.clear()
+                            self.bridge.set_led("solid_green", brightness=50)
+                            break
 
     async def process_and_reply(self, text: str):
         """Processes transcribed user prompt directly and speaks reply."""

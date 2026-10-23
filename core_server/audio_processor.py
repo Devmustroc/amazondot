@@ -45,7 +45,7 @@ class AudioProcessor:
         if len(samples_16bit) < 1280:
             return False
         prob = self.vad.predict(samples_16bit)
-        return float(prob) > 0.35
+        return float(prob) > 0.20
 
     def unpack_raw_to_mono16(self, raw_bytes: bytes) -> np.ndarray:
         """
