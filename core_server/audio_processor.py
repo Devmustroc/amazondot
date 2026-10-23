@@ -4,6 +4,7 @@ Handles multichannel decoding, beamforming/channel extraction, VAD, and wake-wor
 """
 import logging
 import numpy as np
+import scipy.signal
 from openwakeword.model import Model
 from core_server import config
 
@@ -32,8 +33,9 @@ class AudioProcessor:
         self.model_key = list(self.oww_model.models.keys())[0]
         self.frame_buffer = bytearray()
 
-
-
+        # 4th-order Butterworth high-pass filter at 150Hz to eliminate 50Hz/100Hz ground hum & DC bias
+        self.sos = scipy.signal.butter(4, 150, btype='highpass', fs=16000, output='sos')
+        self.zi = scipy.signal.sosfilt_zi(self.sos)
 
     def unpack_raw_to_mono16(self, raw_bytes: bytes) -> np.ndarray:
         """
@@ -41,7 +43,7 @@ class AudioProcessor:
         Each frame has 9 channels * 3 bytes = 27 bytes.
         Channels 0 to 6 are the 7 circular microphones.
         In S24_3LE format, 16-bit audio is stored in byte 0 (LSB) and byte 1 (MSB signed).
-        Averages all 7 microphones for real hardware beamforming and noise reduction.
+        Averages all 7 microphones for real hardware beamforming and applies 150Hz highpass filtering.
         """
         self.frame_buffer.extend(raw_bytes)
         num_frames = len(self.frame_buffer) // config.FRAME_BYTES_RAW
@@ -60,7 +62,10 @@ class AudioProcessor:
             b1 = np.frombuffer(frame_chunk[offset+1::27], dtype=np.int8)
             acc += ((b1.astype(np.int16) << 8) | b0.astype(np.int16)).astype(np.float32)
 
-        mono_int16 = (acc / 7.0).astype(np.int16)
+        mono_float = acc / 7.0
+        # High-pass filter (150Hz cutoff)
+        filtered_float, self.zi = scipy.signal.sosfilt(self.sos, mono_float, zi=self.zi)
+        mono_int16 = np.clip(filtered_float, -32768, 32767).astype(np.int16)
         return mono_int16
 
     def calculate_rms(self, samples: np.ndarray) -> float:

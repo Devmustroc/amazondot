@@ -25,7 +25,7 @@ for adc in A B C D; do
     tinymix "ADC_${adc} Right Ip Select ADC_${adc} DIF1_R switch" 1
     tinymix "ADC_${adc} DIF1_L Input Gain" 1
     tinymix "ADC_${adc} DIF1_R Input Gain" 1
-    tinymix "ADC_${adc} MICPGA Volume Ctrl" 80 80
+    tinymix "ADC_${adc} MICPGA Volume Ctrl" 40 40
     tinymix "ADC_${adc} Digital Volume Control" 64 64
 done
 
