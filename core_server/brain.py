@@ -10,7 +10,7 @@ import scipy.signal as sps
 import soundfile as sf
 import edge_tts
 from faster_whisper import WhisperModel
-from google import genai
+from openai import OpenAI
 from core_server import config
 
 logger = logging.getLogger("brain")
@@ -24,16 +24,19 @@ class Brain:
         except Exception:
             self.whisper = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8")
         
-        # Initialize Gemini Client if key available
-        self.gemini_client = None
-        if config.GEMINI_API_KEY:
+        # Initialize OpenRouter client
+        self.llm_client = None
+        if config.OPENROUTER_API_KEY:
             try:
-                self.gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
-                logger.info("Gemini API Client initialized with model %s", config.GEMINI_MODEL)
+                self.llm_client = OpenAI(
+                    api_key=config.OPENROUTER_API_KEY,
+                    base_url="https://openrouter.ai/api/v1",
+                )
+                logger.info("OpenRouter client initialized with model %s", config.OPENROUTER_MODEL)
             except Exception as e:
-                logger.warning("Failed to initialize Gemini Client: %s", e)
+                logger.warning("Failed to initialize OpenRouter client: %s", e)
         else:
-            logger.info("No GEMINI_API_KEY set. Local fallback logic will be used.")
+            logger.info("No OPENROUTER_API_KEY set. Local fallback logic will be used.")
 
         # In-memory conversation history
         self.history = []
@@ -68,27 +71,38 @@ class Brain:
             return ""
 
     def generate_response(self, prompt: str) -> str:
-        """Sends user prompt to Gemini or returns intelligent local response."""
+        """Sends user prompt to Gemini 3.8 Flash via OpenRouter or returns intelligent local response."""
         if not prompt.strip():
             return "Je ne vous ai pas bien entendu, pouvez-vous répéter ?"
 
-        logger.info("Generating response for: '%s'", prompt)
+        logger.info("Generating response with Gemini for: '%s'", prompt)
 
-        # 1. Try Gemini Cloud AI
-        if self.gemini_client:
+        # 1. Try OpenRouter LLM (Gemini 3.8 Flash)
+        if self.llm_client:
             try:
-                response = self.gemini_client.models.generate_content(
-                    model=config.GEMINI_MODEL,
-                    contents=[
-                        {"role": "user", "parts": [{"text": f"{config.SYSTEM_PROMPT}\n\nUtilisateur: {prompt}"}]}
-                    ]
+                messages = [{"role": "system", "content": config.SYSTEM_PROMPT}]
+                # Add up to 6 recent turns of history
+                messages.extend(self.history[-6:])
+                messages.append({"role": "user", "content": prompt})
+
+                response = self.llm_client.chat.completions.create(
+                    model=config.OPENROUTER_MODEL,
+                    messages=messages,
+                    max_tokens=256,
+                    temperature=0.7,
                 )
-                if response and response.text:
-                    reply = response.text.strip()
-                    logger.info("Gemini response: %s", reply)
-                    return reply
+                reply = response.choices[0].message.content.strip()
+                logger.info("Gemini (%s) response: %s", config.OPENROUTER_MODEL, reply)
+
+                # Update history
+                self.history.append({"role": "user", "content": prompt})
+                self.history.append({"role": "assistant", "content": reply})
+                if len(self.history) > 10:
+                    self.history = self.history[-10:]
+
+                return reply
             except Exception as e:
-                logger.error("Gemini API call failed, falling back to local: %s", e)
+                logger.error("OpenRouter LLM API call failed, falling back to local: %s", e)
 
         # 2. Local Fallback Responses
         p_lower = prompt.lower()
@@ -107,10 +121,13 @@ class Brain:
 
     async def synthesize_speech(self, text: str) -> bytes:
         """
-        Synthesizes text to 48kHz 16-bit stereo WAV audio using edge-tts.
-        Matches Echo Dot hardware DAC requirements (48kHz 2-channel).
+        Synthesizes text to 48kHz 16-bit stereo WAV via Edge-TTS.
+        Matches Echo Dot hardware DAC requirements (48kHz 2-channel 16-bit PCM).
         """
-        logger.info("Synthesizing speech: '%s'", text)
+        if not text.strip():
+            return b""
+
+        logger.info("Synthesizing speech via Edge-TTS: '%s'", text)
         try:
             comm = edge_tts.Communicate(text, config.TTS_VOICE)
             mp3_stream = bytearray()
@@ -118,25 +135,23 @@ class Brain:
                 if chunk["type"] == "audio":
                     mp3_stream.extend(chunk["data"])
 
-            # Read MP3 in memory
             data, sr = sf.read(io.BytesIO(mp3_stream))
 
-            # Resample to 48000 Hz (Echo Dot hardware DAC native rate)
             target_sr = 48000
             if sr != target_sr:
-                new_len = int(round(len(data) * target_sr / sr))
-                data = sps.resample(data, new_len)
+                from math import gcd
+                g = gcd(target_sr, sr)
+                data = sps.resample_poly(data, target_sr // g, sr // g)
+            data = np.clip(data, -1.0, 1.0)
 
-            # Ensure stereo (2 channels)
             if len(data.shape) == 1:
                 data = np.column_stack([data, data])
             elif data.shape[1] == 1:
                 data = np.column_stack([data[:, 0], data[:, 0]])
 
-            # Export to 16-bit PCM WAV in memory
             out_buf = io.BytesIO()
             sf.write(out_buf, data, target_sr, format="WAV", subtype="PCM_16")
             return out_buf.getvalue()
         except Exception as e:
-            logger.error("Error during TTS synthesis: %s", e)
+            logger.error("Edge-TTS synthesis failed: %s", e)
             return b""

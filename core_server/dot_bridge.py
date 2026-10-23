@@ -17,16 +17,32 @@ class DotBridge:
         self.play_port = config.DOT_PLAY_PORT
         self.ctrl_port = config.DOT_CTRL_PORT
 
+    def _get_adb_target(self) -> str:
+        """Determines best active ADB device (Wi-Fi or USB)."""
+        wifi_target = f"{self.host}:5555"
+        try:
+            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=False)
+            lines = [l.strip() for l in res.stdout.splitlines() if "\tdevice" in l]
+            devices = [l.split("\t")[0] for l in lines]
+            if wifi_target in devices:
+                return wifi_target
+            if devices:
+                return devices[0]
+        except Exception:
+            pass
+        return wifi_target
+
     def set_led(self, pattern: str, brightness: int = 80):
         """Sets the LED ring animation pattern via ADB or control port."""
         logger.info("Setting Dot LED to: %s (brightness=%d)", pattern, brightness)
+        target = self._get_adb_target()
         try:
-            # We can invoke ledctrl directly via adb shell for immediate guaranteed response
             subprocess.run(
-                ["adb", "-s", f"{self.host}:5555", "shell", f"su -c 'ledctrl -c && ledctrl -s {pattern} -b {brightness}'"],
+                ["adb", "-s", target, "shell", f"su -c 'ledctrl -c && ledctrl -s {pattern} -b {brightness}'"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                check=False
+                check=False,
+                timeout=3
             )
         except Exception as e:
             logger.error("Failed to set LED via adb: %s", e)
@@ -37,6 +53,7 @@ class DotBridge:
             return
 
         logger.info("Playing %d bytes of audio through Echo Dot speaker...", len(wav_bytes))
+        target = self._get_adb_target()
         try:
             local_wav = "/tmp/tad_speech.wav"
             with open(local_wav, "wb") as f:
@@ -44,20 +61,30 @@ class DotBridge:
 
             remote_wav = "/data/local/tmp/tad_speech.wav"
             subprocess.run(
-                ["adb", "-s", f"{self.host}:5555", "push", local_wav, remote_wav],
+                ["adb", "-s", target, "push", local_wav, remote_wav],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                check=True
+                check=True,
+                timeout=5
+            )
+            # Ensure tad_player.jar is present
+            subprocess.run(
+                ["adb", "-s", target, "push", "tools/tad_player.jar", "/data/local/tmp/tad_player.jar"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=5
             )
             # Use TadPlayer DEX which plays via Android MediaPlayer (AudioFlinger / FastMixer)
             play_cmd = f"CLASSPATH=/data/local/tmp/tad_player.jar app_process / com.tad.Player {remote_wav}"
             subprocess.run(
-                ["adb", "-s", f"{self.host}:5555", "shell", play_cmd],
+                ["adb", "-s", target, "shell", play_cmd],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                check=True
+                check=True,
+                timeout=15
             )
-            logger.info("Playback completed successfully.")
+            logger.info("Playback completed successfully on Dot speaker.")
         except Exception as e:
             logger.error("Failed to play audio on Dot: %s", e)
 

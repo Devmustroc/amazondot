@@ -39,9 +39,9 @@ WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")
 TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 
-# LLM & Brain
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+# LLM & Brain (OpenRouter)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-3.8-flash")
 
 # System Prompt for TAD
 SYSTEM_PROMPT = """Tu t'appelles Régis. Tu es l'assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.
