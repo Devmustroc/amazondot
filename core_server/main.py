@@ -88,8 +88,8 @@ class TadAssistant:
                     silence_frames += 1
                     speech_candidate.extend(chunk_1280.tobytes())
 
-                # If speech finished (silence detected) or maximum duration reached (~2.5s)
-                if len(speech_candidate) > 0 and (silence_frames >= 4 or len(speech_candidate) >= 40000):
+                # If speech finished (approx 1s silence detected) or maximum duration reached (~3.5s)
+                if len(speech_candidate) > 0 and (silence_frames >= 12 or len(speech_candidate) >= 56000):
                     cand_bytes = bytes(speech_candidate)
                     speech_candidate.clear()
                     silence_frames = 0
@@ -98,8 +98,8 @@ class TadAssistant:
                     except Exception:
                         pass
 
-                    # Only transcribe if candidate is at least 300ms (4800 samples = 9600 bytes)
-                    if len(cand_bytes) >= 9600:
+                    # Only transcribe if candidate is at least 500ms (16000 bytes)
+                    if len(cand_bytes) >= 16000:
                         text = self.brain.transcribe(cand_bytes)
                         text_lower = text.lower()
                         logger.info("Candidate speech heard: '%s'", text)
