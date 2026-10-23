@@ -18,8 +18,11 @@ logger = logging.getLogger("brain")
 class Brain:
     def __init__(self):
         logger.info("Initializing Brain (Whisper STT, Gemini Client, Edge-TTS)...")
-        # Load local Whisper STT
-        self.whisper = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8")
+        # Load local Whisper STT (offline)
+        try:
+            self.whisper = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8", local_files_only=True)
+        except Exception:
+            self.whisper = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8")
         
         # Initialize Gemini Client if key available
         self.gemini_client = None
