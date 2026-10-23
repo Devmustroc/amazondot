@@ -5,3 +5,6 @@ __pycache__/
 *.img
 *.wav
 firmware/dumps/
+tools/EchoCLI/
+tools/mtkclient/
+tools/amonet-biscuit/
