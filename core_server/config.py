@@ -29,10 +29,11 @@ VAD_SILENCE_THRESHOLD = float(os.getenv("VAD_SILENCE_THRESHOLD", "12.0")) # RMS
 VAD_SILENCE_DURATION_SEC = float(os.getenv("VAD_SILENCE_DURATION_SEC", "1.2"))
 MAX_RECORDING_SEC = int(os.getenv("MAX_RECORDING_SEC", "10"))
 
-# Wake Word
-WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "alexa") # alexa, hey_jarvis
+# Assistant Identity & Wake Word
+ASSISTANT_NAME = "Régis"
+WAKE_WORDS = ["régis", "regis", "regisse", "alexa"]
+WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "alexa") # openWakeWord model for fast fallback
 WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
-
 
 # Speech-to-Text & Text-to-Speech
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")
@@ -43,5 +44,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 # System Prompt for TAD
-SYSTEM_PROMPT = """Tu es TAD, un assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.
+SYSTEM_PROMPT = """Tu t'appelles Régis. Tu es l'assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.
 Réponds toujours en français de façon naturelle, précise et brève (1 à 3 phrases maximum), car tes réponses sont prononcées à voix haute."""
+

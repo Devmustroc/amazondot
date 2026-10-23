@@ -42,7 +42,12 @@ class Brain:
         """Transcribes 16kHz 16-bit mono PCM into French text using Whisper."""
         try:
             samples = np.frombuffer(pcm_16k_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-            segments, info = self.whisper.transcribe(samples, language="fr", beam_size=1)
+            segments, info = self.whisper.transcribe(
+                samples,
+                language="fr",
+                beam_size=1,
+                initial_prompt="Régis, assistant vocal français."
+            )
             transcription = " ".join([seg.text for seg in segments]).strip()
             logger.info("Transcription: '%s' (language=%s, prob=%.2f)", transcription, info.language, info.language_probability)
             return transcription
@@ -76,9 +81,9 @@ class Brain:
         # 2. Local Fallback Responses
         p_lower = prompt.lower()
         if "bonjour" in p_lower or "salut" in p_lower:
-            return "Bonjour ! Comment puis-je vous aider aujourd'hui ?"
-        elif "qui es-tu" in p_lower or "qui t'appelle" in p_lower:
-            return "Je suis TAD, votre assistant familial intelligent fonctionnant sur votre Echo Dot."
+            return "Bonjour ! Je suis Régis. Comment puis-je vous aider aujourd'hui ?"
+        elif "qui es-tu" in p_lower or "qui t'appelle" in p_lower or "nom" in p_lower:
+            return "Je m'appelle Régis, votre assistant vocal personnel."
         elif "heure" in p_lower:
             import datetime
             now = datetime.datetime.now().strftime("%H heures %M")

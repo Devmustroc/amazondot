@@ -33,9 +33,19 @@ class AudioProcessor:
         self.model_key = list(self.oww_model.models.keys())[0]
         self.frame_buffer = bytearray()
 
+        # Neural Voice Activity Detector (VAD)
+        self.vad = openwakeword.VAD()
+
         # 4th-order Butterworth high-pass filter at 150Hz to eliminate 50Hz/100Hz ground hum & DC bias
         self.sos = scipy.signal.butter(4, 150, btype='highpass', fs=16000, output='sos')
         self.zi = scipy.signal.sosfilt_zi(self.sos)
+
+    def is_speech(self, samples_16bit: np.ndarray) -> bool:
+        """Returns True if human speech is detected by neural VAD."""
+        if len(samples_16bit) < 1280:
+            return False
+        prob = self.vad.predict(samples_16bit)
+        return float(prob) > 0.35
 
     def unpack_raw_to_mono16(self, raw_bytes: bytes) -> np.ndarray:
         """

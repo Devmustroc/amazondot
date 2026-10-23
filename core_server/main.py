@@ -3,6 +3,7 @@ TAD Core - Main Voice Assistant Orchestrator.
 Full-duplex continuous voice assistant loop for Amazon Echo Dot 2G.
 """
 import sys
+import re
 import time
 import asyncio
 import logging
@@ -46,6 +47,8 @@ class TadAssistant:
 
     async def interaction_loop(self, mic_sock):
         buffer_mono = bytearray()
+        speech_candidate = bytearray()
+        silence_frames = 0
         
         while self.running:
             # Read chunk from TCP socket (27 bytes per 9-channel frame)
@@ -55,7 +58,7 @@ class TadAssistant:
                 logger.warning("Stream socket closed by device.")
                 break
 
-            # 1. Unpack to 16kHz mono S16_LE
+            # 1. Unpack to 16kHz mono S16_LE (with 150Hz highpass filter)
             samples_16bit = self.processor.unpack_raw_to_mono16(chunk)
             if len(samples_16bit) == 0:
                 continue
@@ -66,14 +69,60 @@ class TadAssistant:
             while len(buffer_mono) >= 2560:
                 chunk_1280 = np.frombuffer(buffer_mono[:2560], dtype=np.int16)
                 del buffer_mono[:2560]
+
+                # A. Fast ONNX model check (Alexa fallback)
                 if self.processor.process_wake_word(chunk_1280):
-                    logger.info(">>> WAKE WORD TRIGGERED! Transitioning to LISTENING mode.")
+                    logger.info(">>> WAKE WORD TRIGGERED (Alexa)! Transitioning to LISTENING mode.")
                     await self.handle_voice_query(mic_sock)
-                    # Reset buffer after query handling
                     buffer_mono.clear()
+                    speech_candidate.clear()
                     self.bridge.set_led("solid_green", brightness=50)
                     break
 
+                # B. Neural VAD + French Keyword Spotter (Régis)
+                has_speech = self.processor.is_speech(chunk_1280)
+                if has_speech:
+                    speech_candidate.extend(chunk_1280.tobytes())
+                    silence_frames = 0
+                elif len(speech_candidate) > 0:
+                    silence_frames += 1
+                    speech_candidate.extend(chunk_1280.tobytes())
+
+                # If speech finished or accumulated 2.5 seconds
+                if len(speech_candidate) >= 8000 and (silence_frames >= 4 or len(speech_candidate) >= 40000):
+                    cand_bytes = bytes(speech_candidate)
+                    speech_candidate.clear()
+                    silence_frames = 0
+
+                    text = self.brain.transcribe(cand_bytes)
+                    text_lower = text.lower()
+                    matched = any(w in text_lower for w in config.WAKE_WORDS)
+
+                    if matched:
+                        logger.info(">>> WAKE WORD DETECTED: '%s'! Raw heard: '%s'", config.ASSISTANT_NAME, text)
+                        import re
+                        query = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|regisse|alexa)[,\s\.]*', '', text, flags=re.I).strip()
+                        if query:
+                            # Direct command in same sentence (e.g. "Régis, quelle heure est-il ?")
+                            await self.process_and_reply(query)
+                        else:
+                            # Wake word alone ("Régis") -> enter listening mode
+                            await self.handle_voice_query(mic_sock)
+
+                        buffer_mono.clear()
+                        self.bridge.set_led("solid_green", brightness=50)
+                        break
+
+    async def process_and_reply(self, text: str):
+        """Processes transcribed user prompt directly and speaks reply."""
+        self.bridge.set_led("solid_cyan", brightness=80)
+        logger.info("Processing direct prompt: '%s'", text)
+        reply_text = self.brain.generate_response(text)
+        logger.info("Assistant reply: '%s'", reply_text)
+        wav_bytes = await self.brain.synthesize_speech(reply_text)
+        if wav_bytes:
+            self.bridge.set_led("zzz_turbo-boost", brightness=90)
+            self.bridge.play_audio(wav_bytes)
 
     async def handle_voice_query(self, mic_sock):
         """Records voice query until silence is detected, processes it, and replies."""
@@ -128,19 +177,8 @@ class TadAssistant:
             logger.info("No speech detected in transcription.")
             return
 
-        # 4. Generate AI LLM Response
-        reply_text = self.brain.generate_response(text)
-        logger.info("Assistant reply: '%s'", reply_text)
-
-        # 5. Synthesize TTS Audio
-        wav_bytes = await self.brain.synthesize_speech(reply_text)
-        if not wav_bytes:
-            logger.error("Failed to synthesize TTS audio.")
-            return
-
-        # 6. Set LED to Speaking (Turbo pulse) & Play Audio on Echo Dot
-        self.bridge.set_led("zzz_turbo-boost", brightness=90)
-        self.bridge.play_audio(wav_bytes)
+        # 4. Generate AI LLM Response & Synthesize Audio
+        await self.process_and_reply(text)
 
 def main():
     assistant = TadAssistant()
