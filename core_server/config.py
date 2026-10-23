@@ -31,7 +31,8 @@ MAX_RECORDING_SEC = int(os.getenv("MAX_RECORDING_SEC", "10"))
 
 # Wake Word
 WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "alexa") # alexa, hey_jarvis
-WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.5"))
+WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
+
 
 # Speech-to-Text & Text-to-Speech
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")

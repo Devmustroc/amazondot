@@ -37,10 +37,11 @@ class AudioProcessor:
 
     def unpack_raw_to_mono16(self, raw_bytes: bytes) -> np.ndarray:
         """
-        Converts Echo Dot 9-channel S24_3LE raw frames to 16kHz mono int16.
-        Each frame is 27 bytes (9 channels * 3 bytes).
-        Channel 6 (center mic) starts at offset 18.
-        The top 16 bits of 24-bit little endian are at offset +1 and +2.
+        Converts Echo Dot 9-channel raw frames to 16kHz mono int16.
+        Each frame has 9 channels * 3 bytes = 27 bytes.
+        Channels 0 to 6 are the 7 circular microphones.
+        In S24_3LE format, 16-bit audio is stored in byte 0 (LSB) and byte 1 (MSB signed).
+        Averages all 7 microphones for real hardware beamforming and noise reduction.
         """
         self.frame_buffer.extend(raw_bytes)
         num_frames = len(self.frame_buffer) // config.FRAME_BYTES_RAW
@@ -51,14 +52,15 @@ class AudioProcessor:
         frame_chunk = self.frame_buffer[:consumed_bytes]
         del self.frame_buffer[:consumed_bytes]
 
-        # Extract channel 6 high bytes into 16-bit PCM
-        # Channel 6 byte 1 is at 18 + 1 = 19, byte 2 is at 18 + 2 = 20
-        # Striding every 27 bytes:
-        b1 = np.frombuffer(frame_chunk[19::27], dtype=np.uint8)
-        b2 = np.frombuffer(frame_chunk[20::27], dtype=np.int8)
+        # Beamform: average the 7 physical microphones (channels 0..6)
+        acc = np.zeros(num_frames, dtype=np.float32)
+        for ch in range(7):
+            offset = ch * 3
+            b0 = np.frombuffer(frame_chunk[offset::27], dtype=np.uint8)
+            b1 = np.frombuffer(frame_chunk[offset+1::27], dtype=np.int8)
+            acc += ((b1.astype(np.int16) << 8) | b0.astype(np.int16)).astype(np.float32)
 
-        # Recombine into signed 16-bit integer: (b2 << 8) | b1
-        mono_int16 = (b2.astype(np.int16) << 8) | b1.astype(np.int16)
+        mono_int16 = (acc / 7.0).astype(np.int16)
         return mono_int16
 
     def calculate_rms(self, samples: np.ndarray) -> float:
@@ -72,15 +74,19 @@ class AudioProcessor:
         Feeds samples to openWakeWord model.
         Returns True if wake word confidence exceeds threshold.
         """
-        if len(samples_16bit) < 1280: # openWakeWord standard chunk is 1280 samples (80ms)
+        if len(samples_16bit) < 1280:
             return False
 
         # Run prediction
         prediction = self.oww_model.predict(samples_16bit)
         score = prediction.get(self.model_key, 0.0)
+        if score >= 0.1:
+            logger.debug("Wake word score: %.3f (threshold=%.2f)", score, config.WAKE_WORD_THRESHOLD)
+
         if score >= config.WAKE_WORD_THRESHOLD:
             logger.info("Wake word detected! Model: %s, Score: %.3f", self.model_key, score)
             self.oww_model.reset()
             return True
         return False
+
 

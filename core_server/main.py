@@ -62,19 +62,18 @@ class TadAssistant:
 
             buffer_mono.extend(samples_16bit.tobytes())
 
-            # 2. Check for Wake Word every ~80ms (1280 samples = 2560 bytes)
-            if len(buffer_mono) >= 2560:
-                window_samples = np.frombuffer(buffer_mono[-2560:], dtype=np.int16)
-                if self.processor.process_wake_word(window_samples):
+            # 2. Check for Wake Word on successive 1280-sample chunks (80ms)
+            while len(buffer_mono) >= 2560:
+                chunk_1280 = np.frombuffer(buffer_mono[:2560], dtype=np.int16)
+                del buffer_mono[:2560]
+                if self.processor.process_wake_word(chunk_1280):
                     logger.info(">>> WAKE WORD TRIGGERED! Transitioning to LISTENING mode.")
                     await self.handle_voice_query(mic_sock)
                     # Reset buffer after query handling
                     buffer_mono.clear()
                     self.bridge.set_led("solid_green", brightness=50)
+                    break
 
-                # Keep buffer capped
-                if len(buffer_mono) > 16000 * 2: # keep last 1 second
-                    del buffer_mono[:-2560]
 
     async def handle_voice_query(self, mic_sock):
         """Records voice query until silence is detected, processes it, and replies."""
