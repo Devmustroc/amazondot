@@ -1,0 +1,239 @@
+Audio_Amp_R_Switch:	>Off	On
+Audio_Amp_L_Switch:	>Off	On
+Voice_Amp_Switch:	>Off	On
+Speaker_Amp_Switch:	>Off	On
+Headset_Speaker_Amp_Switch:	>Off	On
+Ext_Speaker_Amp_Switch:	>Off	On
+Ext_Headphone_Amp_Switch:	>Off	On
+Headphone_Speaker_Mux:	>Speaker	Headphone
+Headset_PGAL_GAIN:	9Db	7Db	5Db	3Db	1Db	-1Db	-3Db	-5Db
+Headset_PGAR_GAIN:	9Db	7Db	5Db	3Db	1Db	-1Db	-3Db	-5Db
+Handset_PGA_GAIN:	>XXX	XXX	XXX	-16Db	-14Db	-12Db	-10Db	-8Db	-6Db	-4Db	-2Db	0Db	2Db	4Db	6Db	8Db
+Lineout_PGAR_GAIN:	>8Db	7Db	6Db	5Db	4Db	3Db	2Db	1Db	0Db	-1Db	-2Db	-3Db	-4Db	-5Db	-6Db	-7Db	-8Db	-9Db	-10Db	-40Db
+Lineout_PGAL_GAIN:	>8Db	7Db	6Db	5Db	4Db	3Db	2Db	1Db	0Db	-1Db	-2Db	-3Db	-4Db	-5Db	-6Db	-7Db	-8Db	-9Db	-10Db	-40Db
+Ext_Amp_Gain:	>6dB	12dB	18dB	24dB
+AUD_CLK_BUF_Switch:	>Off	On
+Audio_Preamp1_Switch:	OPEN	>IN_ADC1	IN_ADC2	IN_ADC3
+Audio_Preamp2_Switch:	OPEN	IN_ADC1	>IN_ADC2	IN_ADC3
+Audio_ADC_1_Switch:	Off	>On
+Audio_ADC_2_Switch:	Off	>On
+Audio_ADC_3_Switch:	>Off	On
+Audio_ADC_4_Switch:	>Off	On
+Audio_PGA1_Setting:	-6Db	0Db	6Db	>12Db	18Db	24Db
+Audio_PGA2_Setting:	-6Db	0Db	6Db	>12Db	18Db	24Db
+Audio_PGA3_Setting:	>-6Db	0Db	6Db	12Db	18Db	24Db
+Audio_PGA4_Setting:	>-6Db	0Db	6Db	12Db	18Db	24Db
+Audio_MicSource1_Setting:	>ADC1	ADC2	ADC3	ADC4
+Audio_MicSource2_Setting:	>ADC1	ADC2	ADC3	ADC4
+Audio_MicSource3_Setting:	>ADC1	ADC2	ADC3	ADC4
+Audio_MicSource4_Setting:	>ADC1	ADC2	ADC3	ADC4
+Audio_MIC1_Mode_Select:	>ACCMODE	DCCMODE	DMIC	DCCECMDIFFMODE	DCCECMSINGLEMODE
+Audio_MIC2_Mode_Select:	>ACCMODE	DCCMODE	DMIC	DCCECMDIFFMODE	DCCECMSINGLEMODE
+Audio_MIC3_Mode_Select:	>ACCMODE	DCCMODE	DMIC	DCCECMDIFFMODE	DCCECMSINGLEMODE
+Audio_MIC4_Mode_Select:	>ACCMODE	DCCMODE	DMIC	DCCECMDIFFMODE	DCCECMSINGLEMODE
+SineTable_DL_DAC:	>Off	On
+SineTable_UL_ADC:	>Off	On
+Codec_Loopback_Setting:	>OFF	AMIC_TO_HP	AMIC_TO_SPK	HEADSET_MIC_TO_HP	HEADSET_MIC_TO_SPK
+Speech_MD_USAGE:	>Off	On
+Audio_Hdmi_SideGen_Switch:	>Off	On
+AP_Loopback_Select:	>AP_LOOPBACK_NONE	AP_LOOPBACK_AMIC_TO_SPK	AP_LOOPBACK_AMIC_TO_HP	AP_LOOPBACK_HEADSET_MIC_TO_SPK	AP_LOOPBACK_HEADSET_MIC_TO_HP
+Audio_i2s0_SideGen_Switch:	>Off	On48000	On44100	On32000	On16000	On8000
+Audio_i2s0_hd_Switch:	>Off	On
+Audio_ExtCodec_EchoRef_Switch:	>Off	On
+Audio Mrgrx Volume: 65536 (range 0->524288)
+cmb stub Audio Control:	CMB_STUB_AIF_0	CMB_STUB_AIF_1	CMB_STUB_AIF_2	>CMB_STUB_AIF_3
+Audio_I2S0dl1_hd_Switch:	>Off	On
+Audio_I2S0dl1_get_timestamp:ffffffffffffff7f
+Audio_FMTX_hd_Switch:	Off	>On
+Audio_SideGen_Switch:	I0I1	I2	I3I4	I5I6	I7I8	I9	I10I11	I12I13	I14	I15I16	I17I18	I19I20	I21I22	O0O1	O2	O3O4	O5O6	O7O8	O9O10	O11	O12	O13O14	O15O16	O17O18	O19O20	O21O22	O23O24	>OFF
+Audio_SideGen_SampleRate:	8K	11K	12K	16K	22K	24K	32K	44K	>48K
+Audio_SideGen_Amplitude:	>1/128	1/64	1/32	1/16	1/8	1/4	1/2	1
+Audio_Sidetone_Switch:	>Off	On
+Audio_Mode_Switch:	>Normal_Mode	Ringtone_Mode	Incall_Mode	Communication_Mode	Incall2_Mode	Incall_External_Mode
+Audio IRQ1 CNT: 0 (range 0->65536)
+Audio IRQ2 CNT: 1024 (range 0->65536)
+Audio_Debug_Setting:	>Off	On
+Audio_Ipoh_Setting:	>Off	On
+Audio_I2S1_Setting:	>Off	On
+Audio_DacMux_Setting:	>Off	On
+Audio_LineOut_Setting:	>Off	On
+Pmic_Anc_Switch:	>ANCON	ANCOFF
+Audio FM I2S Volume: 65536 (range 0->524288)
+PCM Playback Volume: 127 127 (range 0->175)
+HP Driver Gain Volume: 6 6 (range 0->35)
+LO Driver Gain Volume: 6 6 (range 0->35)
+HP DAC Playback Switch: Off Off
+LO DAC Playback Switch: Off Off
+Mic PGA Switch: On On
+DRC Control:	Disabled	>Enabled	Disabled	>Enabled
+ADCFGA Left Mute Switch: Off
+ADCFGA Right Mute Switch: Off
+ADC Level Volume: 15 15 (range 0->64)
+PGA Level Volume: 0 0 (range 0->95)
+Auto-mute Switch: 0 (range 0->7)
+AGC Left Switch: Off
+AGC Right Switch: Off
+AGC Target Level: 0 0 (range 0->7)
+AGC Gain Hysteresis: 0 0 (range 0->3)
+AGC Hysteresis: 0 0 (range 0->3)
+AGC Noise Threshold: 0 0 (range 0->31)
+AGC Max PGA: 127 127 (range 0->127)
+AGC Attack Time: 0 0 (range 0->31)
+AGC Decay Time: 0 0 (range 0->31)
+AGC Noise Debounce: 0 0 (range 0->31)
+AGC Signal Debounce: 0 0 (range 0->15)
+biquad coefficients:000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+DAC Soft Stepping:	>1 step/sample	1 step/2 sample	disabled
+Right Channel Only:	>Off	On
+Ignore Ramp Up:	>Off	On
+MFP Gpio Mute:	>Off	On
+ADC_A Digital Volume Control: 88 88 (range 0->64)
+ADC_A Left Fine Volume: 4 (range 0->4)
+ADC_A Right Fine Volume: 4 (range 0->4)
+ADC_A MICPGA Volume Ctrl: 40 40 (range 0->80)
+ADC_A IN1_L Input Gain: On
+ADC_A IN2_L Input Gain: On
+ADC_A IN3_L Input Gain: On
+ADC_A DIF1_L Input Gain: Off
+ADC_A DIF2_L Input Gain: On
+ADC_A DIF3_L Input Gain: On
+ADC_A IN1_R Input Gain: On
+ADC_A IN2_R Input Gain: On
+ADC_A IN3_R Input Gain: On
+ADC_A DIF1_R Input Gain: Off
+ADC_A DIF2_R Input Gain: On
+ADC_A DIF3_R Input Gain: On
+ADC_A Left Mute: Off
+ADC_A Right Mute: Off
+ADC_B Digital Volume Control: 88 88 (range 0->64)
+ADC_B Left Fine Volume: 4 (range 0->4)
+ADC_B Right Fine Volume: 4 (range 0->4)
+ADC_B MICPGA Volume Ctrl: 40 40 (range 0->80)
+ADC_B IN1_L Input Gain: On
+ADC_B IN2_L Input Gain: On
+ADC_B IN3_L Input Gain: On
+ADC_B DIF1_L Input Gain: Off
+ADC_B DIF2_L Input Gain: On
+ADC_B DIF3_L Input Gain: On
+ADC_B IN1_R Input Gain: On
+ADC_B IN2_R Input Gain: On
+ADC_B IN3_R Input Gain: On
+ADC_B DIF1_R Input Gain: Off
+ADC_B DIF2_R Input Gain: On
+ADC_B DIF3_R Input Gain: On
+ADC_B Left Mute: Off
+ADC_B Right Mute: Off
+ADC_C Digital Volume Control: 88 88 (range 0->64)
+ADC_C Left Fine Volume: 4 (range 0->4)
+ADC_C Right Fine Volume: 4 (range 0->4)
+ADC_C MICPGA Volume Ctrl: 40 40 (range 0->80)
+ADC_C IN1_L Input Gain: On
+ADC_C IN2_L Input Gain: On
+ADC_C IN3_L Input Gain: On
+ADC_C DIF1_L Input Gain: Off
+ADC_C DIF2_L Input Gain: On
+ADC_C DIF3_L Input Gain: On
+ADC_C IN1_R Input Gain: On
+ADC_C IN2_R Input Gain: On
+ADC_C IN3_R Input Gain: On
+ADC_C DIF1_R Input Gain: Off
+ADC_C DIF2_R Input Gain: On
+ADC_C DIF3_R Input Gain: On
+ADC_C Left Mute: Off
+ADC_C Right Mute: Off
+ADC_D Digital Volume Control: 88 88 (range 0->64)
+ADC_D Left Fine Volume: 4 (range 0->4)
+ADC_D Right Fine Volume: 4 (range 0->4)
+ADC_D MICPGA Volume Ctrl: 40 40 (range 0->80)
+ADC_D IN1_L Input Gain: On
+ADC_D IN2_L Input Gain: On
+ADC_D IN3_L Input Gain: On
+ADC_D DIF1_L Input Gain: Off
+ADC_D DIF2_L Input Gain: On
+ADC_D DIF3_L Input Gain: On
+ADC_D IN1_R Input Gain: On
+ADC_D IN2_R Input Gain: On
+ADC_D IN3_R Input Gain: On
+ADC_D DIF1_R Input Gain: Off
+ADC_D DIF2_R Input Gain: On
+ADC_D DIF3_R Input Gain: On
+ADC_D Left Mute: Off
+ADC_D Right Mute: Off
+IDC Enable: 0 (range 0->1)
+SpiTimeStamps:	>Off	On
+I2S low Jitter function:	>Off	On
+Board Channel Config:	Stereo	MonoLeft	>MonoRight
+LineIn ADC:	>Off	On
+Amp Fault Enable:	>Off	On
+ADC_D Right Ip Select ADC_D IN1_R switch: Off
+ADC_D Right Ip Select ADC_D IN2_R switch: Off
+ADC_D Right Ip Select ADC_D IN3_R switch: Off
+ADC_D Right Ip Select ADC_D DIF1_R switch: On
+ADC_D Right Ip Select ADC_D DIF2_R switch: Off
+ADC_D Right Ip Select ADC_D DIF3_R switch: Off
+ADC_D Right Ip Select ADC_D IN1_L switch: Off
+ADC_D Left Ip Select ADC_D IN1_L switch: Off
+ADC_D Left Ip Select ADC_D IN2_L switch: Off
+ADC_D Left Ip Select ADC_D IN3_L switch: Off
+ADC_D Left Ip Select ADC_D DIF1_L switch: On
+ADC_D Left Ip Select ADC_D DIF2_L switch: Off
+ADC_D Left Ip Select ADC_D DIF3_L switch: Off
+ADC_D Left Ip Select ADC_D IN1_R switch: Off
+ADC_C Right Ip Select ADC_C IN1_R switch: Off
+ADC_C Right Ip Select ADC_C IN2_R switch: Off
+ADC_C Right Ip Select ADC_C IN3_R switch: Off
+ADC_C Right Ip Select ADC_C DIF1_R switch: On
+ADC_C Right Ip Select ADC_C DIF2_R switch: Off
+ADC_C Right Ip Select ADC_C DIF3_R switch: Off
+ADC_C Right Ip Select ADC_C IN1_L switch: Off
+ADC_C Left Ip Select ADC_C IN1_L switch: Off
+ADC_C Left Ip Select ADC_C IN2_L switch: Off
+ADC_C Left Ip Select ADC_C IN3_L switch: Off
+ADC_C Left Ip Select ADC_C DIF1_L switch: On
+ADC_C Left Ip Select ADC_C DIF2_L switch: Off
+ADC_C Left Ip Select ADC_C DIF3_L switch: Off
+ADC_C Left Ip Select ADC_C IN1_R switch: Off
+ADC_B Right DMic Ip ADC_B Right ADC switch: Off
+ADC_B Left DMic Ip ADC_B Left ADC switch: Off
+ADC_B Right Ip Select ADC_B IN1_R switch: Off
+ADC_B Right Ip Select ADC_B IN2_R switch: Off
+ADC_B Right Ip Select ADC_B IN3_R switch: Off
+ADC_B Right Ip Select ADC_B DIF1_R switch: On
+ADC_B Right Ip Select ADC_B DIF2_R switch: Off
+ADC_B Right Ip Select ADC_B DIF3_R switch: Off
+ADC_B Right Ip Select ADC_B IN1_L switch: Off
+ADC_B Left Ip Select ADC_B IN1_L switch: Off
+ADC_B Left Ip Select ADC_B IN2_L switch: Off
+ADC_B Left Ip Select ADC_B IN3_L switch: Off
+ADC_B Left Ip Select ADC_B DIF1_L switch: On
+ADC_B Left Ip Select ADC_B DIF2_L switch: Off
+ADC_B Left Ip Select ADC_B DIF3_L switch: Off
+ADC_B Left Ip Select ADC_B IN1_R switch: Off
+ADC_A Right DMic Ip ADC_A Right ADC switch: Off
+ADC_A Left DMic Ip ADC_A Left ADC switch: Off
+ADC_A Right Ip Select ADC_A IN1_R switch: Off
+ADC_A Right Ip Select ADC_A IN2_R switch: Off
+ADC_A Right Ip Select ADC_A IN3_R switch: Off
+ADC_A Right Ip Select ADC_A DIF1_R switch: On
+ADC_A Right Ip Select ADC_A DIF2_R switch: Off
+ADC_A Right Ip Select ADC_A DIF3_R switch: Off
+ADC_A Right Ip Select ADC_A IN1_L switch: Off
+ADC_A Left Ip Select ADC_A IN1_L switch: Off
+ADC_A Left Ip Select ADC_A IN2_L switch: Off
+ADC_A Left Ip Select ADC_A IN3_L switch: Off
+ADC_A Left Ip Select ADC_A DIF1_L switch: On
+ADC_A Left Ip Select ADC_A DIF2_L switch: Off
+ADC_A Left Ip Select ADC_A DIF3_L switch: Off
+ADC_A Left Ip Select ADC_A IN1_R switch: Off
+Right Input Mixer IN1_R P Switch: Off
+Right Input Mixer IN2_R P Switch: Off
+Right Input Mixer IN3_R P Switch: Off
+Left Input Mixer IN1_L P Switch: Off
+Left Input Mixer IN2_L P Switch: Off
+Left Input Mixer IN3_L P Switch: Off
+LOR Output Mixer R_DAC Switch: Off
+HPR Output Mixer R_DAC Switch: On
+HPR Output Mixer IN1_R Switch: Off
+LOL Output Mixer L_DAC Switch: Off
+HPL Output Mixer L_DAC Switch: On
+HPL Output Mixer IN1_L Switch: Off

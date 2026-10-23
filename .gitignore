@@ -4,7 +4,12 @@ __pycache__/
 *.bin
 *.img
 *.wav
-firmware/dumps/
+*.pcm
+*.so
+firmware/
+tools/tinycap
 tools/EchoCLI/
 tools/mtkclient/
 tools/amonet-biscuit/
+.env
+.env.local
