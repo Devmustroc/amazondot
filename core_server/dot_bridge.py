@@ -49,8 +49,9 @@ class DotBridge:
                 stderr=subprocess.DEVNULL,
                 check=True
             )
+            cmd = f"su -c 'tinyplay {remote_wav} -D 0 -d 0 2>/dev/null || tinyplay {remote_wav} -D 0 -d 23'"
             subprocess.run(
-                ["adb", "-s", f"{self.host}:5555", "shell", f"su -c 'tinyctlplay {remote_wav} -D 0 -d 0 -a 100 -m 100'"],
+                ["adb", "-s", f"{self.host}:5555", "shell", cmd],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=True

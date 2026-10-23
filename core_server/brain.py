@@ -107,8 +107,8 @@ class Brain:
 
     async def synthesize_speech(self, text: str) -> bytes:
         """
-        Synthesizes text to 16kHz 16-bit mono WAV audio using edge-tts.
-        Returns complete WAV bytes ready to play on Echo Dot DAC.
+        Synthesizes text to 48kHz 16-bit stereo WAV audio using edge-tts.
+        Matches Echo Dot hardware DAC requirements (48kHz 2-channel).
         """
         logger.info("Synthesizing speech: '%s'", text)
         try:
@@ -121,18 +121,21 @@ class Brain:
             # Read MP3 in memory
             data, sr = sf.read(io.BytesIO(mp3_stream))
 
-            # Resample to 16000 Hz if needed
-            if sr != config.SAMPLE_RATE:
-                new_len = int(round(len(data) * config.SAMPLE_RATE / sr))
+            # Resample to 48000 Hz (Echo Dot hardware DAC native rate)
+            target_sr = 48000
+            if sr != target_sr:
+                new_len = int(round(len(data) * target_sr / sr))
                 data = sps.resample(data, new_len)
 
-            # Ensure mono
-            if len(data.shape) > 1:
-                data = np.mean(data, axis=1)
+            # Ensure stereo (2 channels)
+            if len(data.shape) == 1:
+                data = np.column_stack([data, data])
+            elif data.shape[1] == 1:
+                data = np.column_stack([data[:, 0], data[:, 0]])
 
             # Export to 16-bit PCM WAV in memory
             out_buf = io.BytesIO()
-            sf.write(out_buf, data, config.SAMPLE_RATE, format="WAV", subtype="PCM_16")
+            sf.write(out_buf, data, target_sr, format="WAV", subtype="PCM_16")
             return out_buf.getvalue()
         except Exception as e:
             logger.error("Error during TTS synthesis: %s", e)
