@@ -38,15 +38,23 @@ class DotBridge:
 
         logger.info("Playing %d bytes of audio through Echo Dot speaker...", len(wav_bytes))
         try:
-            # Connect to playback socket or push to Dot
-            # We push the generated audio to /data/local/tmp/tad_speech.wav and execute tinyctlplay
-            process = subprocess.Popen(
-                ["adb", "-s", f"{self.host}:5555", "shell", "su -c 'cat > /data/local/tmp/tad_speech.wav && tinyctlplay /data/local/tmp/tad_speech.wav -D 0 -d 0 -a 100 -m 100'"],
-                stdin=subprocess.PIPE,
+            local_wav = "/tmp/tad_speech.wav"
+            with open(local_wav, "wb") as f:
+                f.write(wav_bytes)
+
+            remote_wav = "/data/local/tmp/tad_speech.wav"
+            subprocess.run(
+                ["adb", "-s", f"{self.host}:5555", "push", local_wav, remote_wav],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
+                check=True
             )
-            process.communicate(input=wav_bytes, timeout=15)
+            subprocess.run(
+                ["adb", "-s", f"{self.host}:5555", "shell", f"su -c 'tinyctlplay {remote_wav} -D 0 -d 0 -a 100 -m 100'"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True
+            )
             logger.info("Playback completed successfully.")
         except Exception as e:
             logger.error("Failed to play audio on Dot: %s", e)

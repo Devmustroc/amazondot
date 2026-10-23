@@ -29,9 +29,15 @@ for adc in A B C D; do
     tinymix "ADC_${adc} Digital Volume Control" 64 64
 done
 
-# 2. Setup Playback DAC Route
+# 2. Setup Playback DAC Route & Hardware Speaker Amplifier
 tinymix "HPL Output Mixer L_DAC Switch" 1
 tinymix "HPR Output Mixer R_DAC Switch" 1
+tinymix Audio_Amp_R_Switch On
+tinymix Audio_Amp_L_Switch On
+tinymix Speaker_Amp_Switch On
+tinymix Ext_Speaker_Amp_Switch On
+tinymix "HP DAC Playback Switch" 1 1
+tinymix "LO DAC Playback Switch" 1 1
 
 # 3. Set LED to solid green (idle / ready)
 /system/bin/ledctrl -c
