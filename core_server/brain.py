@@ -41,12 +41,24 @@ class Brain:
     def transcribe(self, pcm_16k_bytes: bytes) -> str:
         """Transcribes 16kHz 16-bit mono PCM into French text using Whisper."""
         try:
-            samples = np.frombuffer(pcm_16k_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+            raw_s16 = np.frombuffer(pcm_16k_bytes, dtype=np.int16)
+            rms = float(np.sqrt(np.mean(raw_s16.astype(np.float32) ** 2))) if len(raw_s16) > 0 else 0.0
+            logger.info("Audio to transcribe: %d samples (%.2fs), RMS=%.1f, range=[%d, %d]",
+                        len(raw_s16), len(raw_s16)/16000.0, rms, raw_s16.min() if len(raw_s16) else 0, raw_s16.max() if len(raw_s16) else 0)
+            
+            try:
+                sf.write("tools/debug_transcribe.wav", raw_s16, 16000)
+            except Exception:
+                pass
+
+            samples = raw_s16.astype(np.float32) / 32768.0
             segments, info = self.whisper.transcribe(
                 samples,
                 language="fr",
-                beam_size=1,
-                initial_prompt="Régis, assistant vocal français."
+                beam_size=5,
+                initial_prompt="Régis",
+                condition_on_previous_text=False,
+                vad_filter=False
             )
             transcription = " ".join([seg.text for seg in segments]).strip()
             logger.info("Transcription: '%s' (language=%s, prob=%.2f)", transcription, info.language, info.language_probability)
