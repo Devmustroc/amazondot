@@ -76,7 +76,9 @@ class TadAssistant:
                 # A. Fast ONNX model check (Alexa fallback)
                 if self.processor.process_wake_word(chunk_1280):
                     logger.info(">>> WAKE WORD TRIGGERED (Alexa)! Transitioning to LISTENING mode.")
-                    await self.handle_voice_query(mic_sock)
+                    buffer_mono.clear()
+                    speech_candidate.clear()
+                    await self.run_conversation_session(mic_sock)
                     buffer_mono.clear()
                     speech_candidate.clear()
                     self.bridge.set_led("solid_green", brightness=50)

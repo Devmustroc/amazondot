@@ -1,0 +1,5 @@
+#!/system/bin/sh
+# TAD Instant Green Replacement for Amazon Bootanimation
+/system/bin/ledctrl -c 2>/dev/null
+/system/bin/ledctrl -s solid_green -b 50 2>/dev/null
+exit 0

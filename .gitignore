@@ -13,3 +13,6 @@ tools/mtkclient/
 tools/amonet-biscuit/
 .env
 .env.local
+*.log
+*.mp3
+tools/framework.jar
