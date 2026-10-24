@@ -47,7 +47,7 @@ tinymix Ext_Speaker_Amp_Switch On 2>/dev/null
 STREAM_HELPER="/data/adb/tad_stream_worker.sh"
 cat << 'HELPER_EOF' > ${STREAM_HELPER}
 #!/system/bin/sh
-for p in $(/data/local/tmp/busybox pgrep tinycap); do kill -9 $p 2>/dev/null; done
+for p in $(/data/local/tmp/busybox pgrep -x tinycap); do kill -9 $p 2>/dev/null; done
 PIPE="/data/local/tmp/tad_stream_$$.fifo"
 rm -f $PIPE
 /data/local/tmp/busybox mkfifo $PIPE
@@ -60,8 +60,8 @@ rm -f $PIPE
 HELPER_EOF
 chmod 755 ${STREAM_HELPER}
 
-for p in $(/data/local/tmp/busybox pgrep nc); do kill -9 $p 2>/dev/null; done
-/data/local/tmp/busybox nohup /data/local/tmp/busybox nc -lk -p 9000 -e ${STREAM_HELPER} >/dev/null 2>&1 &
+/data/local/tmp/busybox fuser -k 9000/tcp 2>/dev/null
+/data/local/tmp/busybox nohup /data/local/tmp/busybox nc -lk -p 9000 -e ${STREAM_HELPER} </dev/null >/dev/null 2>&1 &
 
 # 5. Background Bloatware Cleaner (Waits for Android Framework to complete boot)
 (
