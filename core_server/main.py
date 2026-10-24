@@ -113,41 +113,37 @@ class TadAssistant:
                         if matched:
                             logger.info(">>> WAKE WORD DETECTED: '%s'! Full phrase: '%s'", config.ASSISTANT_NAME, text)
                             query = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|r[ée]gi|regisse|alexa)[,\s\.]*', '', text, flags=re.I).strip()
-                            if len(query) >= 3:
-                                # Direct command in same sentence (e.g. "Régis, quelle heure est-il ?")
-                                await self.process_and_reply(query)
-                            else:
-                                # Wake word alone ("Régis") -> enter listening mode
-                                await self.handle_voice_query(mic_sock)
-
                             buffer_mono.clear()
-                            self.bridge.set_led("solid_green", brightness=50)
+                            
+                            # Start multi-turn continuous conversation
+                            initial_text = query if len(query) >= 3 else None
+                            await self.run_conversation_session(mic_sock, initial_text=initial_text)
+                            
+                            buffer_mono.clear()
+                            speech_candidate.clear()
                             break
 
-    async def process_and_reply(self, text: str):
-        """Processes transcribed user prompt directly and speaks reply."""
-        self.bridge.set_led("solid_cyan", brightness=80)
-        logger.info("Processing direct prompt: '%s'", text)
-        reply_text = self.brain.generate_response(text)
-        logger.info("Assistant reply: '%s'", reply_text)
-        wav_bytes = await self.brain.synthesize_speech(reply_text)
-        if wav_bytes:
-            self.bridge.set_led("solid_cyan", brightness=90)
-            self.bridge.play_audio(wav_bytes)
-            self.bridge.set_led("solid_green", brightness=50)
-
-    async def handle_voice_query(self, mic_sock):
-        """Records voice query until silence is detected, processes it, and replies."""
-        # 1. Set LED to Listening (Blue)
-        self.bridge.set_led("solid_blue", brightness=90)
-
-        logger.info("Listening for speech...")
+    async def record_voice_phrase(self, mic_sock, timeout_sec: float) -> str:
+        """
+        Listens to microphone stream:
+        - Times out if no speech detected within timeout_sec.
+        - Once speech starts, records until silence of VAD_SILENCE_DURATION_SEC.
+        - Transcribes and returns the user speech string (or empty if timeout/silence).
+        """
         speech_pcm = bytearray()
         silence_start = None
         speech_started = False
         start_time = time.time()
 
-        while time.time() - start_time < config.MAX_RECORDING_SEC:
+        while self.running:
+            # Check for initial inactivity timeout before speech starts
+            if not speech_started and (time.time() - start_time >= timeout_sec):
+                logger.info("Follow-up silence timeout (%.1fs) reached without speech.", timeout_sec)
+                return ""
+
+            if time.time() - start_time >= config.MAX_RECORDING_SEC:
+                break
+
             chunk = mic_sock.recv(4320)
             if not chunk:
                 break
@@ -159,7 +155,6 @@ class TadAssistant:
             speech_pcm.extend(samples.tobytes())
             rms = self.processor.calculate_rms(samples)
 
-            # Simple energy VAD
             if rms > config.VAD_SILENCE_THRESHOLD:
                 speech_started = True
                 silence_start = None
@@ -168,29 +163,80 @@ class TadAssistant:
                     if silence_start is None:
                         silence_start = time.time()
                     elif time.time() - silence_start >= config.VAD_SILENCE_DURATION_SEC:
-                        logger.info("End of speech detected (silence duration reached).")
+                        logger.info("End of phrase detected.")
                         break
 
             await asyncio.sleep(0)
 
-        if len(speech_pcm) == 0:
-            logger.warning("No audio recorded.")
-            return
+        if not speech_started or len(speech_pcm) < 8000:
+            return ""
 
-        # 2. Set LED to Thinking (Cyan)
         self.bridge.set_led("solid_cyan", brightness=80)
-        logger.info("Transcribing %d bytes of speech...", len(speech_pcm))
-
-        # 3. Transcribe via Whisper
         text = self.brain.transcribe(bytes(speech_pcm))
-        logger.info("User prompt: '%s'", text)
+        return text.strip()
 
-        if not text.strip():
-            logger.info("No speech detected in transcription.")
-            return
+    async def run_conversation_session(self, mic_sock, initial_text: str = None):
+        """
+        Runs an active multi-turn conversation session.
+        Keeps listening for follow-up questions without requiring the wake word 'Régis'
+        until a silence timeout is reached or user closes the conversation.
+        """
+        current_text = initial_text
 
-        # 4. Generate AI LLM Response & Synthesize Audio
-        await self.process_and_reply(text)
+        while self.running:
+            # If we don't have a prompt (follow-up turn), listen for one
+            if not current_text:
+                self.bridge.set_led("solid_blue", brightness=85)
+                logger.info(">> Continuous conversation active. Listening for follow-up (timeout=%.1fs)...",
+                            config.FOLLOWUP_TIMEOUT_SEC)
+                current_text = await self.record_voice_phrase(mic_sock, timeout_sec=config.FOLLOWUP_TIMEOUT_SEC)
+
+            if not current_text:
+                logger.info("No follow-up speech heard. Closing continuous conversation.")
+                break
+
+            # Strip optional leading 'Régis' if user still said it by habit
+            cleaned_text = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|r[ée]gi|regisse|alexa)[,\s\.]*', '', current_text, flags=re.I).strip()
+            if not cleaned_text:
+                cleaned_text = current_text
+
+            text_lower = cleaned_text.lower()
+            logger.info("User prompt in conversation: '%s'", cleaned_text)
+
+            # Check if user wants to close conversation
+            closing_detected = any(cw in text_lower for cw in config.CLOSING_WORDS)
+            if closing_detected and len(cleaned_text.split()) <= 4:
+                logger.info("User closing phrase detected ('%s'). Closing conversation.", cleaned_text)
+                if "merci" in text_lower:
+                    farewell = "Avec plaisir ! N'hésite pas si tu as besoin d'autre chose."
+                elif "bonne nuit" in text_lower:
+                    farewell = "Bonne nuit à toute la famille !"
+                elif "au revoir" in text_lower or "à plus" in text_lower:
+                    farewell = "À très bientôt !"
+                else:
+                    farewell = "C'est noté, je reste disponible."
+                
+                self.bridge.set_led("solid_cyan", brightness=90)
+                wav_bytes = await self.brain.synthesize_speech(farewell)
+                if wav_bytes:
+                    self.bridge.play_audio(wav_bytes)
+                break
+
+            # Process AI Response
+            self.bridge.set_led("solid_cyan", brightness=80)
+            reply_text = self.brain.generate_response(cleaned_text)
+            logger.info("Assistant reply: '%s'", reply_text)
+
+            wav_bytes = await self.brain.synthesize_speech(reply_text)
+            if wav_bytes:
+                self.bridge.set_led("solid_cyan", brightness=90)
+                self.bridge.play_audio(wav_bytes)
+
+            # Reset current_text to None so next iteration listens for follow-up!
+            current_text = None
+
+        # Reset to idle green once conversation ends
+        self.bridge.set_led("solid_green", brightness=50)
 
 def main():
     assistant = TadAssistant()
