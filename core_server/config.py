@@ -42,6 +42,8 @@ TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
 # LLM & Brain (OpenRouter)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-3.8-flash")
+OPENROUTER_TTS_MODEL = os.getenv("OPENROUTER_TTS_MODEL", "google/gemini-3.8-flash-lite-tts")
+OPENROUTER_TTS_VOICE = os.getenv("OPENROUTER_TTS_VOICE", "Puck")
 
 # System Prompt for TAD
 SYSTEM_PROMPT = """Tu t'appelles Régis. Tu es l'assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.

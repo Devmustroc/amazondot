@@ -55,7 +55,16 @@ class DotBridge:
         logger.info("Playing %d bytes of audio through Echo Dot speaker...", len(wav_bytes))
         target = self._get_adb_target()
         try:
-            local_wav = "/tmp/tad_speech.wav"
+            # Set hardware DAC to Amazon official acoustic profile (Right channel only, calibrated gain)
+            subprocess.run(
+                ["adb", "-s", target, "shell", "su -c 'tinymix \"Right Channel Only\" On; tinymix \"HP Driver Gain Volume\" 6 6'"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=3
+            )
+
+            local_wav = "tools/tad_speech.wav"
             with open(local_wav, "wb") as f:
                 f.write(wav_bytes)
 
