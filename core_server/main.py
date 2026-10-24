@@ -33,6 +33,9 @@ class TadAssistant:
         self.running = True
         logger.info("Starting TAD Assistant loop connecting to Echo Dot at %s...", config.DOT_HOST)
         
+        # Initialize async brain services (MCP, etc.)
+        await self.brain.initialize()
+
         # Ensure LED is green on startup
         self.bridge.set_led("solid_green", brightness=50)
 

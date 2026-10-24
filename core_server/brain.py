@@ -3,6 +3,7 @@ TAD Brain Module.
 Integrates Whisper Speech-to-Text, Gemini AI LLM inference, and Edge-TTS synthesis.
 """
 import io
+import os
 import logging
 import asyncio
 import numpy as np
@@ -50,16 +51,26 @@ def process_audio_for_echo_dot(data: np.ndarray, sr: int) -> bytes:
     sf.write(out_buf, data, target_sr, format="WAV", subtype="PCM_16")
     return out_buf.getvalue()
 
+from core_server.obsidian_memory import ObsidianMemory
+from core_server.mcp_client import McpManager
+import requests
+
 class Brain:
     def __init__(self):
-        logger.info("Initializing Brain (Whisper STT, Gemini Client, Edge-TTS)...")
-        # Load local Whisper STT (offline)
+        logger.info("Initializing Brain (Whisper STT, Hybrid LLM, Obsidian Memory, MCP)...")
+        # 1. Load local Whisper STT
         try:
             self.whisper = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8", local_files_only=True)
         except Exception:
             self.whisper = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8")
         
-        # Initialize OpenRouter client
+        # 2. Obsidian Memory
+        self.obsidian = ObsidianMemory()
+
+        # 3. MCP Manager (tools)
+        self.mcp = McpManager()
+
+        # 4. OpenRouter Jev Router & Models
         self.llm_client = None
         if config.OPENROUTER_API_KEY:
             try:
@@ -67,28 +78,32 @@ class Brain:
                     api_key=config.OPENROUTER_API_KEY,
                     base_url="https://openrouter.ai/api/v1",
                 )
-                logger.info("OpenRouter client initialized with model %s", config.OPENROUTER_MODEL)
+                logger.info("OpenRouter client initialized (Router: typesafe/jev-router, Model: %s)", config.OPENROUTER_MODEL)
             except Exception as e:
                 logger.warning("Failed to initialize OpenRouter client: %s", e)
-        else:
-            logger.info("No OPENROUTER_API_KEY set. Local fallback logic will be used.")
+
+        # 5. Local Ollama Settings
+        self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "qwen2.5:latest")
+        self.router_model = os.getenv("OPENROUTER_ROUTER_MODEL", "typesafe/jev-router")
 
         # In-memory conversation history
         self.history = []
+
+    async def initialize(self):
+        """Asynchronous initialization of external services (MCP, etc.)."""
+        try:
+            await self.mcp.initialize()
+        except Exception as e:
+            logger.warning("Error initializing MCP manager: %s", e)
 
     def transcribe(self, pcm_16k_bytes: bytes) -> str:
         """Transcribes 16kHz 16-bit mono PCM into French text using Whisper."""
         try:
             raw_s16 = np.frombuffer(pcm_16k_bytes, dtype=np.int16)
             rms = float(np.sqrt(np.mean(raw_s16.astype(np.float32) ** 2))) if len(raw_s16) > 0 else 0.0
-            logger.info("Audio to transcribe: %d samples (%.2fs), RMS=%.1f, range=[%d, %d]",
-                        len(raw_s16), len(raw_s16)/16000.0, rms, raw_s16.min() if len(raw_s16) else 0, raw_s16.max() if len(raw_s16) else 0)
+            logger.info("Audio to transcribe: %d samples (%.2fs), RMS=%.1f", len(raw_s16), len(raw_s16)/16000.0, rms)
             
-            try:
-                sf.write("tools/debug_transcribe.wav", raw_s16, 16000)
-            except Exception:
-                pass
-
             samples = raw_s16.astype(np.float32) / 32768.0
             segments, info = self.whisper.transcribe(
                 samples,
@@ -105,54 +120,134 @@ class Brain:
             logger.error("Error during transcription: %s", e)
             return ""
 
+    def _query_ollama(self, messages: list) -> Optional[str]:
+        """Calls local Ollama instance (Qwen 2.5). Fast and 100% private."""
+        try:
+            r = requests.post(
+                self.ollama_url,
+                json={
+                    "model": self.ollama_model,
+                    "messages": messages,
+                    "stream": False,
+                    "options": {"temperature": 0.7, "num_predict": 128}
+                },
+                timeout=4.0
+            )
+            if r.status_code == 200:
+                reply = r.json().get("message", {}).get("content", "").strip()
+                if reply:
+                    logger.info("Ollama (%s) replied: %s", self.ollama_model, reply)
+                    return reply
+        except Exception as e:
+            logger.warning("Local Ollama query failed: %s", e)
+        return None
+
     def generate_response(self, prompt: str) -> str:
-        """Sends user prompt to Gemini 3.8 Flash via OpenRouter or returns intelligent local response."""
+        """
+        Processes user prompt via Hybrid Decision Engine:
+        - Memory Learning: detects and saves new family facts to Obsidian.
+        - Fast Local: simple, polite, or quick queries answered by Ollama (<700ms).
+        - Reasoning & Tools: complex queries routed via OpenRouter JEV Router to Gemini 3.8 Flash + MCP.
+        """
         if not prompt.strip():
             return "Je ne vous ai pas bien entendu, pouvez-vous répéter ?"
 
-        logger.info("Generating response with Gemini for: '%s'", prompt)
+        logger.info("Evaluating prompt: '%s'", prompt)
+        p_lower = prompt.lower()
 
-        # 1. Try OpenRouter LLM (Gemini 3.8 Flash)
+        # 1. Fact Learning in Obsidian Vault
+        import re
+        learn_match = re.search(r'(retiens que|souviens-toi que|note que|enregistre que)\s+(.*)', p_lower)
+        if learn_match:
+            fact_text = learn_match.group(2).strip()
+            self.obsidian.record_fact("Famille", fact_text)
+            reply = f"C'est bien noté dans ma mémoire, j'ai enregistré que {fact_text}."
+            return reply
+
+        # Build dynamic system prompt with Obsidian knowledge
+        obsidian_context = self.obsidian.get_context_summary()
+        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\n\nContexte familial et Homelab connu:\n{obsidian_context}"
+
+        messages = [{"role": "system", "content": dynamic_system_prompt}]
+        messages.extend(self.history[-6:])
+        messages.append({"role": "user", "content": prompt})
+
+        # 2. Fast Router Classifier: Decide whether to route locally or to JEV
+        complex_triggers = ["cherche", "recherche", "suricate", "suricata", "proxmox", "opensense", "opnsense",
+                            "notion", "firewall", "internet", "pourquoi", "explique", "détaille", "compare", "météo de demain"]
+        is_complex = any(k in p_lower for k in complex_triggers) or len(prompt.split()) > 14
+
+        # A. Try Local Ollama first if prompt is simple/routine
+        if not is_complex:
+            logger.info("Routing simple/routine prompt to Local Ollama (%s)...", self.ollama_model)
+            ollama_reply = self._query_ollama(messages)
+            if ollama_reply:
+                self.history.append({"role": "user", "content": prompt})
+                self.history.append({"role": "assistant", "content": ollama_reply})
+                return ollama_reply
+
+        # B. Route to OpenRouter JEV Router for reasoning, tool use or complex questions
         if self.llm_client:
             try:
-                messages = [{"role": "system", "content": config.SYSTEM_PROMPT}]
-                # Add up to 6 recent turns of history
-                messages.extend(self.history[-6:])
-                messages.append({"role": "user", "content": prompt})
+                logger.info("Routing to OpenRouter JEV Router (%s)...", self.router_model)
+                tools = self.mcp.get_openai_tools()
+                kwargs = {
+                    "model": self.router_model,
+                    "messages": messages,
+                    "max_tokens": 256,
+                    "temperature": 0.7,
+                }
+                if tools:
+                    kwargs["tools"] = tools
 
-                response = self.llm_client.chat.completions.create(
-                    model=config.OPENROUTER_MODEL,
-                    messages=messages,
-                    max_tokens=256,
-                    temperature=0.7,
-                )
-                reply = response.choices[0].message.content.strip()
-                logger.info("Gemini (%s) response: %s", config.OPENROUTER_MODEL, reply)
+                response = self.llm_client.chat.completions.create(**kwargs)
+                message = response.choices[0].message
 
-                # Update history
+                # Handle tool calls if returned
+                if hasattr(message, "tool_calls") and message.tool_calls:
+                    for tc in message.tool_calls:
+                        func_name = tc.function.name
+                        try:
+                            args = json.loads(tc.function.arguments)
+                        except Exception:
+                            args = {}
+                        logger.info("LLM triggered tool: %s with args: %s", func_name, args)
+                        loop = asyncio.get_event_loop()
+                        tool_res = loop.run_until_complete(self.mcp.call_tool(func_name, args))
+                        messages.append(message)
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": tool_res
+                        })
+
+                    # Second turn after tool output
+                    second_resp = self.llm_client.chat.completions.create(
+                        model=config.OPENROUTER_MODEL,
+                        messages=messages,
+                        max_tokens=256
+                    )
+                    reply = second_resp.choices[0].message.content.strip()
+                else:
+                    reply = message.content.strip()
+
+                logger.info("JEV/OpenRouter response: %s", reply)
                 self.history.append({"role": "user", "content": prompt})
                 self.history.append({"role": "assistant", "content": reply})
-                if len(self.history) > 10:
-                    self.history = self.history[-10:]
-
                 return reply
             except Exception as e:
-                logger.error("OpenRouter LLM API call failed, falling back to local: %s", e)
+                logger.error("OpenRouter JEV call failed, trying local fallback: %s", e)
 
-        # 2. Local Fallback Responses
-        p_lower = prompt.lower()
-        if "bonjour" in p_lower or "salut" in p_lower:
-            return "Bonjour ! Je suis Régis. Comment puis-je vous aider aujourd'hui ?"
-        elif "qui es-tu" in p_lower or "qui t'appelle" in p_lower or "nom" in p_lower:
-            return "Je m'appelle Régis, votre assistant vocal personnel."
-        elif "heure" in p_lower:
+        # C. Fallback to Local Ollama if not already tried
+        ollama_reply = self._query_ollama(messages)
+        if ollama_reply:
+            return ollama_reply
+
+        # D. Ultimate Hardcoded Fallbacks
+        if "heure" in p_lower:
             import datetime
-            now = datetime.datetime.now().strftime("%H heures %M")
-            return f"Il est actuellement {now}."
-        elif "météo" in p_lower:
-            return "La météo est clémente avec quelques nuages et une température agréable."
-        else:
-            return f"J'ai bien compris : {prompt}. Que souhaitez-vous que je fasse ?"
+            return f"Il est actuellement {datetime.datetime.now().strftime('%H heures %M')}."
+        return "J'ai bien entendu votre demande, mais je n'ai pas pu joindre mes moteurs de réflexion."
 
     async def synthesize_speech(self, text: str) -> bytes:
         """

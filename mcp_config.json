@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "firecrawl": {
+      "enabled": false,
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": ""
+      }
+    },
+    "notion": {
+      "enabled": false,
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-notion"],
+      "env": {
+        "NOTION_API_KEY": ""
+      }
+    }
+  }
+}
