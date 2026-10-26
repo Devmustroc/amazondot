@@ -129,10 +129,12 @@ class TadAssistant:
         """
         Listens to microphone stream:
         - Times out if no speech detected within timeout_sec.
+        - Uses Neural VAD + RMS floor to filter out background room noise.
         - Once speech starts, records until silence of VAD_SILENCE_DURATION_SEC.
         - Transcribes and returns the user speech string (or empty if timeout/silence).
         """
         speech_pcm = bytearray()
+        buf_mono = bytearray()
         silence_start = None
         speech_started = False
         start_time = time.time()
@@ -140,7 +142,7 @@ class TadAssistant:
         while self.running:
             # Check for initial inactivity timeout before speech starts
             if not speech_started and (time.time() - start_time >= timeout_sec):
-                logger.info("Follow-up silence timeout (%.1fs) reached without speech.", timeout_sec)
+                logger.info("Follow-up silence timeout (%.1fs) reached without speech. Returning to standby.", timeout_sec)
                 return ""
 
             if time.time() - start_time >= config.MAX_RECORDING_SEC:
@@ -154,23 +156,35 @@ class TadAssistant:
             if len(samples) == 0:
                 continue
 
-            speech_pcm.extend(samples.tobytes())
-            rms = self.processor.calculate_rms(samples)
+            buf_mono.extend(samples.tobytes())
 
-            if rms > config.VAD_SILENCE_THRESHOLD:
-                speech_started = True
-                silence_start = None
-            else:
-                if speech_started:
+            phrase_ended = False
+            while len(buf_mono) >= 2560:
+                chunk_1280 = np.frombuffer(buf_mono[:2560], dtype=np.int16)
+                del buf_mono[:2560]
+
+                rms = self.processor.calculate_rms(chunk_1280)
+                has_voice = self.processor.is_speech(chunk_1280) and rms > 45.0
+
+                if has_voice:
+                    speech_started = True
+                    silence_start = None
+                    speech_pcm.extend(chunk_1280.tobytes())
+                elif speech_started:
+                    speech_pcm.extend(chunk_1280.tobytes())
                     if silence_start is None:
                         silence_start = time.time()
                     elif time.time() - silence_start >= config.VAD_SILENCE_DURATION_SEC:
-                        logger.info("End of phrase detected.")
+                        logger.info("End of phrase detected after %.1fs silence.", config.VAD_SILENCE_DURATION_SEC)
+                        phrase_ended = True
                         break
+
+            if phrase_ended:
+                break
 
             await asyncio.sleep(0)
 
-        if not speech_started or len(speech_pcm) < 8000:
+        if not speech_started or len(speech_pcm) < 16000:
             return ""
 
         self.bridge.set_led("solid_cyan", brightness=80)

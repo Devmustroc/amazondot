@@ -49,5 +49,5 @@ OPENROUTER_TTS_VOICE = os.getenv("OPENROUTER_TTS_VOICE", "Puck")
 SYSTEM_PROMPT = """Tu t'appelles Régis. Tu es l'assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.
 Réponds toujours en français de façon naturelle, précise et brève (1 à 3 phrases maximum), car tes réponses sont prononcées à voix haute."""
 # Continuous Conversation (Follow-up Mode)
-FOLLOWUP_TIMEOUT_SEC = float(os.getenv("FOLLOWUP_TIMEOUT_SEC", "6.0"))
+FOLLOWUP_TIMEOUT_SEC = float(os.getenv("FOLLOWUP_TIMEOUT_SEC", "10.0"))
 CLOSING_WORDS = ["merci", "c'est bon", "stop", "au revoir", "bonne journée", "bonne nuit", "à plus", "rien", "c'est tout", "non c'est bon"]

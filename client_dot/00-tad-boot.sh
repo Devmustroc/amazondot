@@ -1,4 +1,6 @@
 #!/system/bin/sh
+exec > /data/adb/service_boot.log 2>&1
+set -x
 # ==============================================================================
 # TAD Boot & Persistence Service for Amazon Echo Dot 2G
 # Installed in: /data/adb/service.d/00-tad-boot.sh (Magisk autostart)
@@ -90,6 +92,13 @@ chmod 755 ${STREAM_HELPER}
     done
 
     /system/bin/ledctrl -s solid_green -b 50 2>/dev/null
+
+    # Keep firewall open permanently against netd resets
+    while true; do
+        iptables -I INPUT 1 -j ACCEPT 2>/dev/null
+        iptables -P INPUT ACCEPT 2>/dev/null
+        sleep 15
+    done
 ) >/dev/null 2>&1 &
 
 exit 0

@@ -55,9 +55,9 @@ class DotBridge:
         logger.info("Playing %d bytes of audio through Echo Dot speaker...", len(wav_bytes))
         target = self._get_adb_target()
         try:
-            # Set hardware DAC to Amazon official acoustic profile (Right channel only, calibrated gain)
+            # Unmute amplifier and configure acoustic profile
             subprocess.run(
-                ["adb", "-s", target, "shell", "su -c 'tinymix \"Right Channel Only\" On; tinymix \"HP Driver Gain Volume\" 6 6'"],
+                ["adb", "-s", target, "shell", "su -c 'tinymix Speaker_Amp_Switch On; tinymix Audio_Amp_R_Switch On; tinymix \"Right Channel Only\" On; tinymix \"HP Driver Gain Volume\" 6 6'"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=False,
@@ -96,6 +96,18 @@ class DotBridge:
             logger.info("Playback completed successfully on Dot speaker.")
         except Exception as e:
             logger.error("Failed to play audio on Dot: %s", e)
+        finally:
+            # Mute speaker amplifier when idle to completely eliminate background hiss/hum
+            try:
+                subprocess.run(
+                    ["adb", "-s", target, "shell", "su -c 'tinymix Speaker_Amp_Switch Off; tinymix Audio_Amp_R_Switch Off'"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=3
+                )
+            except Exception:
+                pass
 
     def open_mic_stream(self) -> socket.socket:
         """Establishes TCP connection to the microphone stream on the Echo Dot."""
