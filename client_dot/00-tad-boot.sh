@@ -32,24 +32,26 @@ for adc in A B C D; do
     tinymix "ADC_${adc} Right Ip Select ADC_${adc} DIF1_R switch" 1 2>/dev/null
     tinymix "ADC_${adc} DIF1_L Input Gain" 1 2>/dev/null
     tinymix "ADC_${adc} DIF1_R Input Gain" 1 2>/dev/null
-    tinymix "ADC_${adc} MICPGA Volume Ctrl" 40 40 2>/dev/null
+    tinymix "ADC_${adc} MICPGA Volume Ctrl" 60 60 2>/dev/null
     tinymix "ADC_${adc} Digital Volume Control" 64 64 2>/dev/null
 done
 
 tinymix "HPL Output Mixer L_DAC Switch" 1 2>/dev/null
 tinymix "HPR Output Mixer R_DAC Switch" 1 2>/dev/null
 tinymix "Right Channel Only" On 2>/dev/null
-tinymix "HP Driver Gain Volume" 6 6 2>/dev/null
-tinymix Audio_Amp_R_Switch On 2>/dev/null
-tinymix Audio_Amp_L_Switch On 2>/dev/null
-tinymix Speaker_Amp_Switch On 2>/dev/null
-tinymix Ext_Speaker_Amp_Switch On 2>/dev/null
+tinymix "HP Driver Gain Volume" 18 18 2>/dev/null
+tinymix Audio_Amp_R_Switch Off 2>/dev/null
+tinymix Audio_Amp_L_Switch Off 2>/dev/null
+tinymix Speaker_Amp_Switch Off 2>/dev/null
+tinymix Ext_Speaker_Amp_Switch Off 2>/dev/null
 
-# 4. Persistent Mic Stream Server on Port 9000
+# 4. Physical Buttons Daemon (Mute, Volume +, Volume -, Action)
+nohup sh /data/adb/tad_button_handler.sh >/dev/null 2>&1 &
+
+# 5. Persistent Mic Stream Server on Port 9000
 STREAM_HELPER="/data/adb/tad_stream_worker.sh"
 cat << 'HELPER_EOF' > ${STREAM_HELPER}
 #!/system/bin/sh
-for p in $(/data/local/tmp/busybox pgrep -x tinycap); do kill -9 $p 2>/dev/null; done
 PIPE="/data/local/tmp/tad_stream_$$.fifo"
 rm -f $PIPE
 /data/local/tmp/busybox mkfifo $PIPE
@@ -63,7 +65,7 @@ HELPER_EOF
 chmod 755 ${STREAM_HELPER}
 
 /data/local/tmp/busybox fuser -k 9000/tcp 2>/dev/null
-sh -c "while true; do /data/local/tmp/busybox nc -l -p 9000 -e ${STREAM_HELPER}; sleep 0.5; done" >/dev/null 2>&1 &
+nohup /data/local/tmp/busybox sh -c "while true; do /data/local/tmp/busybox nc -l -p 9000 -e ${STREAM_HELPER}; sleep 0.2; done" >/dev/null 2>&1 &
 
 # 5. Background Bloatware Cleaner (Waits for Android Framework to complete boot)
 (
