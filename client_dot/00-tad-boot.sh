@@ -46,7 +46,8 @@ tinymix Speaker_Amp_Switch Off 2>/dev/null
 tinymix Ext_Speaker_Amp_Switch Off 2>/dev/null
 
 # 4. Physical Buttons Daemon (Mute, Volume +, Volume -, Action)
-nohup sh /data/adb/tad_button_handler.sh >/dev/null 2>&1 &
+chmod 755 /data/adb/tad_buttonsd 2>/dev/null
+nohup /data/adb/tad_buttonsd >/data/adb/tad_buttons.log 2>&1 &
 
 # 5. Persistent Mic Stream Server on Port 9000
 STREAM_HELPER="/data/adb/tad_stream_worker.sh"
