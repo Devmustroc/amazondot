@@ -109,11 +109,19 @@ class Brain:
                 samples,
                 language="fr",
                 beam_size=5,
-                initial_prompt="Régis",
+                initial_prompt="Bonjour Régis. Quelle heure est-il ? Quel jour sommes-nous ? Comment vas-tu ? Quelle est la météo ?",
                 condition_on_previous_text=False,
                 vad_filter=False
             )
             transcription = " ".join([seg.text for seg in segments]).strip()
+
+            # Phonetic post-processing corrections for Whisper tiny on French speech
+            t_lower = transcription.lower()
+            if any(p in t_lower for p in ["qu'est-ce que leur est-il", "qu'elle heure est-il", "quel heure est-il", "qu'est ce que leur est il", "qu'est ce que l'heure est il"]):
+                transcription = "Quelle heure est-il ?"
+            elif any(p in t_lower for p in ["quel jour on est", "quel jour nous sommes", "on est quel jour"]):
+                transcription = "Quel jour sommes-nous ?"
+
             logger.info("Transcription: '%s' (language=%s, prob=%.2f)", transcription, info.language, info.language_probability)
             return transcription
         except Exception as e:
@@ -131,7 +139,7 @@ class Brain:
                     "stream": False,
                     "options": {"temperature": 0.7, "num_predict": 128}
                 },
-                timeout=4.0
+                timeout=6.0
             )
             if r.status_code == 200:
                 reply = r.json().get("message", {}).get("content", "").strip()
@@ -145,6 +153,7 @@ class Brain:
     def generate_response(self, prompt: str) -> str:
         """
         Processes user prompt via Hybrid Decision Engine:
+        - Instant Intents: clock time, date, identity (0ms latency, zero hallucination).
         - Memory Learning: detects and saves new family facts to Obsidian.
         - Fast Local: simple, polite, or quick queries answered by Ollama (<700ms).
         - Reasoning & Tools: complex queries routed via OpenRouter JEV Router to Gemini 3.8 Flash + MCP.
@@ -154,8 +163,32 @@ class Brain:
 
         logger.info("Evaluating prompt: '%s'", prompt)
         p_lower = prompt.lower()
+        from datetime import datetime
+        now = datetime.now()
 
-        # 1. Fact Learning in Obsidian Vault
+        # 1. Instant Intent: Heure actuelle
+        if any(k in p_lower for k in ["heure est-il", "l'heure", "il est quelle heure", "donne-moi l'heure", "donne l'heure"]):
+            h = now.hour
+            m = now.minute
+            m_str = "pile" if m == 0 else f"{m:02d}" if m < 10 else str(m)
+            h_str = f"{h} heure{'s' if h > 1 else ''}"
+            reply = f"Il est actuellement {h_str} {m_str}."
+            logger.info("Instant Time Intent triggered: '%s'", reply)
+            return reply
+
+        # 2. Instant Intent: Date et Jour actuel
+        if any(k in p_lower for k in ["quel jour", "la date", "date d'aujourd'hui", "on est quel jour"]):
+            jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+            mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+            reply = f"Nous sommes le {jours[now.weekday()]} {now.day} {mois[now.month - 1]} {now.year}."
+            logger.info("Instant Date Intent triggered: '%s'", reply)
+            return reply
+
+        # 3. Instant Intent: Identité
+        if any(k in p_lower for k in ["qui es-tu", "comment tu t'appelles", "présente-toi", "t'es qui"]):
+            return "Je m'appelle Régis, je suis l'assistant vocal IA familial pour la maison de El Mustapha."
+
+        # 4. Fact Learning in Obsidian Vault
         import re
         learn_match = re.search(r'(retiens que|souviens-toi que|note que|enregistre que)\s+(.*)', p_lower)
         if learn_match:
@@ -164,9 +197,10 @@ class Brain:
             reply = f"C'est bien noté dans ma mémoire, j'ai enregistré que {fact_text}."
             return reply
 
-        # Build dynamic system prompt with Obsidian knowledge
+        # Build dynamic system prompt with live date/time and Obsidian knowledge
+        now_str = now.strftime("%A %d %B %Y à %H:%M")
         obsidian_context = self.obsidian.get_context_summary()
-        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\n\nContexte familial et Homelab connu:\n{obsidian_context}"
+        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\nDate et heure courantes: {now_str}\n\nContexte familial et Homelab connu:\n{obsidian_context}"
 
         messages = [{"role": "system", "content": dynamic_system_prompt}]
         messages.extend(self.history[-6:])
