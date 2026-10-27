@@ -164,7 +164,7 @@ class TadAssistant:
                 del buf_mono[:2560]
 
                 rms = self.processor.calculate_rms(chunk_1280)
-                has_voice = self.processor.is_speech(chunk_1280) and rms > 45.0
+                has_voice = self.processor.is_speech(chunk_1280) and rms > 15.0
 
                 if has_voice:
                     speech_started = True
@@ -198,6 +198,13 @@ class TadAssistant:
         until a silence timeout is reached or user closes the conversation.
         """
         current_text = initial_text
+
+        # If user called "Régis" alone without a prompt, vocally answer "Oui ?" to acknowledge
+        if not current_text:
+            self.bridge.set_led("solid_cyan", brightness=90)
+            wav_ack = await self.brain.synthesize_speech("Oui ?")
+            if wav_ack:
+                self.bridge.play_audio(wav_ack)
 
         while self.running:
             # If we don't have a prompt (follow-up turn), listen for one

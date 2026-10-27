@@ -63,7 +63,7 @@ HELPER_EOF
 chmod 755 ${STREAM_HELPER}
 
 /data/local/tmp/busybox fuser -k 9000/tcp 2>/dev/null
-/data/local/tmp/busybox nohup /data/local/tmp/busybox nc -lk -p 9000 -e ${STREAM_HELPER} </dev/null >/dev/null 2>&1 &
+sh -c "while true; do /data/local/tmp/busybox nc -l -p 9000 -e ${STREAM_HELPER}; sleep 0.5; done" >/dev/null 2>&1 &
 
 # 5. Background Bloatware Cleaner (Waits for Android Framework to complete boot)
 (

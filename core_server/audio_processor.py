@@ -45,15 +45,16 @@ class AudioProcessor:
         if len(samples_16bit) < 1280:
             return False
         prob = self.vad.predict(samples_16bit)
-        return float(prob) > 0.20
+        return float(prob) > 0.15
 
     def unpack_raw_to_mono16(self, raw_bytes: bytes) -> np.ndarray:
         """
         Converts Echo Dot 9-channel raw frames to 16kHz mono int16.
         Each frame has 9 channels * 3 bytes = 27 bytes.
-        Channels 0 to 6 are the 7 circular microphones.
-        In S24_3LE format, 16-bit audio is stored in byte 0 (LSB) and byte 1 (MSB signed).
-        Averages all 7 microphones for real hardware beamforming and applies 150Hz highpass filtering.
+        Channel 6 is the omnidirectional center microphone (starts at offset 18).
+        Channels 0 to 5 are the outer circular microphones.
+        Blends 60% center mic + 40% outer array average to avoid phase cancellation,
+        with 1.5x gain boost and 150Hz Butterworth highpass filter.
         """
         self.frame_buffer.extend(raw_bytes)
         num_frames = len(self.frame_buffer) // config.FRAME_BYTES_RAW
@@ -64,15 +65,21 @@ class AudioProcessor:
         frame_chunk = self.frame_buffer[:consumed_bytes]
         del self.frame_buffer[:consumed_bytes]
 
-        # Beamform: average the 7 physical microphones (channels 0..6)
-        acc = np.zeros(num_frames, dtype=np.float32)
-        for ch in range(7):
+        # Extract Center Microphone (Channel 6)
+        c_offset = 6 * 3  # 18
+        c_b1 = np.frombuffer(frame_chunk[c_offset+1::27], dtype=np.uint8)
+        c_b2 = np.frombuffer(frame_chunk[c_offset+2::27], dtype=np.int8)
+        center_mic = ((c_b2.astype(np.int16) << 8) | c_b1.astype(np.int16)).astype(np.float32)
+
+        # Outer microphones (channels 0..5)
+        outer_acc = np.zeros(num_frames, dtype=np.float32)
+        for ch in range(6):
             offset = ch * 3
             b1 = np.frombuffer(frame_chunk[offset+1::27], dtype=np.uint8)
             b2 = np.frombuffer(frame_chunk[offset+2::27], dtype=np.int8)
-            acc += ((b2.astype(np.int16) << 8) | b1.astype(np.int16)).astype(np.float32)
+            outer_acc += ((b2.astype(np.int16) << 8) | b1.astype(np.int16)).astype(np.float32)
 
-        mono_float = acc / 7.0
+        mono_float = (0.60 * center_mic + 0.40 * (outer_acc / 6.0)) * 1.5
         # High-pass filter (150Hz cutoff)
         filtered_float, self.zi = scipy.signal.sosfilt(self.sos, mono_float, zi=self.zi)
         mono_int16 = np.clip(filtered_float, -32768, 32767).astype(np.int16)
