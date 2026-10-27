@@ -19,6 +19,9 @@ setprop persist.adb.tcp.port 5555
 if [ -f /data/adb/active-thinking-purple.animation ]; then
     mount -o bind /data/adb/active-thinking-purple.animation /system/etc/led-resources/active-thinking.animation 2>/dev/null
 fi
+if [ -f /data/adb/active-talking-cyberpunk.animation ]; then
+    mount -o bind /data/adb/active-talking-cyberpunk.animation /system/etc/led-resources/active-talking.animation 2>/dev/null
+fi
 /system/bin/ledctrl -c 2>/dev/null
 /system/bin/ledctrl -s solid_green -b 50 2>/dev/null
 
