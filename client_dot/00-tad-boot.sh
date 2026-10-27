@@ -16,6 +16,9 @@ setprop service.adb.tcp.port 5555
 setprop persist.adb.tcp.port 5555
 
 # 3. Audio Hardware Mixer & LED
+if [ -f /data/adb/active-thinking-purple.animation ]; then
+    mount -o bind /data/adb/active-thinking-purple.animation /system/etc/led-resources/active-thinking.animation 2>/dev/null
+fi
 /system/bin/ledctrl -c 2>/dev/null
 /system/bin/ledctrl -s solid_green -b 50 2>/dev/null
 
