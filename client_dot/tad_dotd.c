@@ -424,6 +424,30 @@ static void handle_ctrl_client(int srv, int cli) {
             snprintf(reply, sizeof(reply), "OK VOL %d\n", g_volume);
             send_ctrl_line_locked(reply);
             pthread_mutex_unlock(&g_lock);
+        } else if (strncmp(line, "MUTE ", 5) == 0) {
+            int m = atoi(line + 5);
+            pthread_mutex_lock(&g_lock);
+            g_muted = m ? 1 : 0;
+            g_vol_timer_ticks = 0;
+            apply_mute_hardware(g_muted);
+            restore_active_led_locked();
+            snprintf(reply, sizeof(reply), "OK MUTE %d\n", g_muted);
+            send_ctrl_line_locked(reply);
+            pthread_mutex_unlock(&g_lock);
+        } else if (strcmp(line, "ACTION") == 0) {
+            pthread_mutex_lock(&g_lock);
+            if (g_play_pid > 0) {
+                stop_playback_locked();
+                restore_active_led_locked();
+                send_ctrl_line_locked("EVT ACTION BARGE_IN\n");
+            } else if (!g_muted) {
+                snprintf(g_current_led, sizeof(g_current_led), "solid_cyan");
+                g_current_bri = 90;
+                ledctrl_apply("solid_cyan", 90);
+                send_ctrl_line_locked("EVT ACTION WAKE\n");
+            }
+            send_ctrl_line_locked("OK ACTION\n");
+            pthread_mutex_unlock(&g_lock);
         } else if (strcmp(line, "STOP") == 0) {
             pthread_mutex_lock(&g_lock);
             stop_playback_locked();
@@ -612,21 +636,24 @@ int main(int argc, char *argv[]) {
     pthread_create(&mic_tid, NULL, mic_server_thread, NULL);
     pthread_create(&ctrl_tid, NULL, ctrl_server_thread, NULL);
 
-    int fd1 = open("/dev/input/event1", O_RDONLY | O_NONBLOCK);
-    int fd2 = open("/dev/input/event2", O_RDONLY | O_NONBLOCK);
-
-    struct pollfd fds[2];
+    int input_fds[3] = {-1, -1, -1};
+    struct pollfd fds[3];
     int nfds = 0;
-    if (fd1 >= 0) {
-        fds[nfds].fd = fd1;
-        fds[nfds].events = POLLIN;
-        nfds++;
+
+    const char *dev_paths[3] = {"/dev/input/event0", "/dev/input/event1", "/dev/input/event2"};
+    for (int i = 0; i < 3; i++) {
+        int ifd = open(dev_paths[i], O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+        input_fds[i] = ifd;
+        if (ifd >= 0) {
+            fds[nfds].fd = ifd;
+            fds[nfds].events = POLLIN;
+            nfds++;
+            printf("[tad_dotd] Monitoring input device: %s\n", dev_paths[i]);
+        } else {
+            printf("[tad_dotd] Could not open %s: %s\n", dev_paths[i], strerror(errno));
+        }
     }
-    if (fd2 >= 0) {
-        fds[nfds].fd = fd2;
-        fds[nfds].events = POLLIN;
-        nfds++;
-    }
+    fflush(stdout);
 
     struct input_event ev;
     while (g_running) {
@@ -636,53 +663,52 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < nfds; i++) {
                 if (fds[i].revents & POLLIN) {
                     while (read(fds[i].fd, &ev, sizeof(ev)) == sizeof(ev)) {
-                        if (ev.type == EV_KEY && ev.value == 1) {
-                            char evt_msg[64];
-                            switch (ev.code) {
-                                case 113: /* KEY_MUTE */
-                                    pthread_mutex_lock(&g_lock);
-                                    g_muted = !g_muted;
-                                    g_vol_timer_ticks = 0;
-                                    apply_mute_hardware(g_muted);
+                        if (ev.type != EV_KEY) continue;
+
+                        printf("[tad_dotd] Physical Key: code=%d val=%d\n", ev.code, ev.value);
+                        fflush(stdout);
+
+                        char evt_msg[64];
+                        if (ev.value == 1) {
+                            if (ev.code == 113) { /* KEY_MUTE */
+                                pthread_mutex_lock(&g_lock);
+                                g_muted = !g_muted;
+                                g_vol_timer_ticks = 0;
+                                apply_mute_hardware(g_muted);
+                                restore_active_led_locked();
+                                snprintf(evt_msg, sizeof(evt_msg), "EVT MUTE %d\n", g_muted);
+                                send_ctrl_line_locked(evt_msg);
+                                pthread_mutex_unlock(&g_lock);
+                            } else if (ev.code == 138) { /* KEY_HELP (Action Button) */
+                                pthread_mutex_lock(&g_lock);
+                                if (g_play_pid > 0) {
+                                    stop_playback_locked();
                                     restore_active_led_locked();
-                                    snprintf(evt_msg, sizeof(evt_msg), "EVT MUTE %d\n", g_muted);
-                                    send_ctrl_line_locked(evt_msg);
-                                    pthread_mutex_unlock(&g_lock);
-                                    break;
+                                    send_ctrl_line_locked("EVT ACTION BARGE_IN\n");
+                                } else if (!g_muted) {
+                                    snprintf(g_current_led, sizeof(g_current_led), "solid_cyan");
+                                    g_current_bri = 90;
+                                    ledctrl_apply("solid_cyan", 90);
+                                    send_ctrl_line_locked("EVT ACTION WAKE\n");
+                                }
+                                pthread_mutex_unlock(&g_lock);
+                            }
+                        }
 
-                                case 115: /* KEY_VOLUMEUP */
-                                    pthread_mutex_lock(&g_lock);
-                                    set_volume_locked(g_volume + VOL_STEP_SIZE, 1);
-                                    snprintf(evt_msg, sizeof(evt_msg), "EVT VOL %d\n", g_volume);
-                                    send_ctrl_line_locked(evt_msg);
-                                    pthread_mutex_unlock(&g_lock);
-                                    break;
-
-                                case 114: /* KEY_VOLUMEDOWN */
-                                    pthread_mutex_lock(&g_lock);
-                                    set_volume_locked(g_volume - VOL_STEP_SIZE, 1);
-                                    snprintf(evt_msg, sizeof(evt_msg), "EVT VOL %d\n", g_volume);
-                                    send_ctrl_line_locked(evt_msg);
-                                    pthread_mutex_unlock(&g_lock);
-                                    break;
-
-                                case 138: /* KEY_HELP (Action Button) */
-                                    pthread_mutex_lock(&g_lock);
-                                    if (g_play_pid > 0) {
-                                        stop_playback_locked();
-                                        restore_active_led_locked();
-                                        send_ctrl_line_locked("EVT ACTION BARGE_IN\n");
-                                    } else if (!g_muted) {
-                                        snprintf(g_current_led, sizeof(g_current_led), "solid_cyan");
-                                        g_current_bri = 90;
-                                        ledctrl_apply("solid_cyan", 90);
-                                        send_ctrl_line_locked("EVT ACTION WAKE\n");
-                                    }
-                                    pthread_mutex_unlock(&g_lock);
-                                    break;
-
-                                default:
-                                    break;
+                        /* Volume Up / Down supports both press (1) and repeat/hold (2) */
+                        if (ev.value == 1 || ev.value == 2) {
+                            if (ev.code == 115) { /* KEY_VOLUMEUP */
+                                pthread_mutex_lock(&g_lock);
+                                set_volume_locked(g_volume + VOL_STEP_SIZE, 1);
+                                snprintf(evt_msg, sizeof(evt_msg), "EVT VOL %d\n", g_volume);
+                                send_ctrl_line_locked(evt_msg);
+                                pthread_mutex_unlock(&g_lock);
+                            } else if (ev.code == 114) { /* KEY_VOLUMEDOWN */
+                                pthread_mutex_lock(&g_lock);
+                                set_volume_locked(g_volume - VOL_STEP_SIZE, 1);
+                                snprintf(evt_msg, sizeof(evt_msg), "EVT VOL %d\n", g_volume);
+                                send_ctrl_line_locked(evt_msg);
+                                pthread_mutex_unlock(&g_lock);
                             }
                         }
                     }
@@ -700,8 +726,9 @@ int main(int argc, char *argv[]) {
         pthread_mutex_unlock(&g_lock);
     }
 
-    if (fd1 >= 0) close(fd1);
-    if (fd2 >= 0) close(fd2);
+    for (int i = 0; i < 3; i++) {
+        if (input_fds[i] >= 0) close(input_fds[i]);
+    }
     speaker_amp_disable();
     return 0;
 }
