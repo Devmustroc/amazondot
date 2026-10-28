@@ -120,10 +120,12 @@ static void speaker_amp_enable_locked(void) {
     char gain_str[16];
     snprintf(gain_str, sizeof(gain_str), "%d", gain);
     tinymix_set3("HP Driver Gain Volume", gain_str, gain_str);
-    tinymix_set2("Ext_Amp_Gain", "18dB");
+    tinymix_set3("LO Driver Gain Volume", gain_str, gain_str);
     tinymix_set2("Right Channel Only", "On");
     tinymix_set2("HPL Output Mixer L_DAC Switch", "1");
     tinymix_set2("HPR Output Mixer R_DAC Switch", "1");
+    tinymix_set2("LOL Output Mixer L_DAC Switch", "1");
+    tinymix_set2("LOR Output Mixer R_DAC Switch", "1");
     tinymix_set3("HP DAC Playback Switch", "1", "1");
     tinymix_set3("LO DAC Playback Switch", "1", "1");
     tinymix_set2("Audio_Amp_R_Switch", "On");
@@ -138,6 +140,7 @@ static void speaker_amp_disable(void) {
     tinymix_set2("Audio_Amp_R_Switch", "Off");
     tinymix_set2("Audio_Amp_L_Switch", "Off");
     tinymix_set3("HP DAC Playback Switch", "0", "0");
+    tinymix_set3("LO DAC Playback Switch", "0", "0");
 }
 
 static int stop_playback_locked(void) {
@@ -514,7 +517,10 @@ static void handle_ctrl_client(int srv, int cli) {
                     dup2(devnull, STDERR_FILENO);
                     if (devnull > 2) close(devnull);
                 }
-                char *const play_argv[] = {"/system/bin/tinyplay", (char *)wav_path, NULL};
+                char *const play_argv[] = {
+                    "/system/bin/tinyctlplay", (char *)wav_path,
+                    "-D", "0", "-d", "0", "-a", "100", "-m", "100", NULL
+                };
                 execv(play_argv[0], play_argv);
                 _exit(127);
             }
