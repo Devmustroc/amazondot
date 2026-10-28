@@ -115,17 +115,29 @@ static void send_ctrl_line_locked(const char *line) {
 
 static void speaker_amp_enable_locked(void) {
     int gain = (g_volume * GAIN_MAX) / VOL_MAX;
+    if (gain < 8) gain = 8;
+    if (gain > GAIN_MAX) gain = GAIN_MAX;
     char gain_str[16];
     snprintf(gain_str, sizeof(gain_str), "%d", gain);
     tinymix_set3("HP Driver Gain Volume", gain_str, gain_str);
+    tinymix_set2("Ext_Amp_Gain", "18dB");
     tinymix_set2("Right Channel Only", "On");
+    tinymix_set2("HPL Output Mixer L_DAC Switch", "1");
+    tinymix_set2("HPR Output Mixer R_DAC Switch", "1");
+    tinymix_set3("HP DAC Playback Switch", "1", "1");
+    tinymix_set3("LO DAC Playback Switch", "1", "1");
     tinymix_set2("Audio_Amp_R_Switch", "On");
+    tinymix_set2("Audio_Amp_L_Switch", "On");
     tinymix_set2("Speaker_Amp_Switch", "On");
+    tinymix_set2("Ext_Speaker_Amp_Switch", "On");
 }
 
 static void speaker_amp_disable(void) {
     tinymix_set2("Speaker_Amp_Switch", "Off");
+    tinymix_set2("Ext_Speaker_Amp_Switch", "Off");
     tinymix_set2("Audio_Amp_R_Switch", "Off");
+    tinymix_set2("Audio_Amp_L_Switch", "Off");
+    tinymix_set3("HP DAC Playback Switch", "0", "0");
 }
 
 static int stop_playback_locked(void) {
