@@ -308,7 +308,7 @@ static void *mic_server_thread(void *arg) {
 
         fcntl(cli, F_SETFD, FD_CLOEXEC);
         int yes = 1;
-        int user_timeout_ms = 3000;
+        int user_timeout_ms = 30000;
         setsockopt(cli, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
         setsockopt(cli, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes));
 #ifdef TCP_USER_TIMEOUT
