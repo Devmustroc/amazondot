@@ -48,6 +48,7 @@ static volatile sig_atomic_t g_running = 1;
 
 static int g_volume = 18;
 static int g_muted = 0;
+static int g_amp_gain_db = 12;
 static char g_current_led[64] = "solid_green";
 static int g_current_bri = 40;
 
@@ -119,8 +120,11 @@ static void speaker_amp_enable_locked(void) {
     if (gain > GAIN_MAX) gain = GAIN_MAX;
     char gain_str[16];
     snprintf(gain_str, sizeof(gain_str), "%d", gain);
+    char amp_gain_str[16];
+    snprintf(amp_gain_str, sizeof(amp_gain_str), "%ddB", g_amp_gain_db);
     tinymix_set3("HP Driver Gain Volume", gain_str, gain_str);
     tinymix_set3("LO Driver Gain Volume", gain_str, gain_str);
+    tinymix_set2("Ext_Amp_Gain", amp_gain_str);
     tinymix_set2("Audio_DacMux_Setting", "Off");
     tinymix_set2("Right Channel Only", "On");
     tinymix_set2("HPL Output Mixer L_DAC Switch", "1");
@@ -439,6 +443,28 @@ static void handle_ctrl_client(int srv, int cli) {
             pthread_mutex_lock(&g_lock);
             set_volume_locked(v, 1);
             snprintf(reply, sizeof(reply), "OK VOL %d\n", g_volume);
+            send_ctrl_line_locked(reply);
+            pthread_mutex_unlock(&g_lock);
+        } else if (strncmp(line, "AMPGAIN ", 8) == 0) {
+            int g = atoi(line + 8);
+            if (g != 6 && g != 12 && g != 18 && g != 24) g = 12;
+            pthread_mutex_lock(&g_lock);
+            g_amp_gain_db = g;
+            char g_str[16];
+            snprintf(g_str, sizeof(g_str), "%ddB", g_amp_gain_db);
+            tinymix_set2("Ext_Amp_Gain", g_str);
+            snprintf(reply, sizeof(reply), "OK AMPGAIN %d\n", g_amp_gain_db);
+            send_ctrl_line_locked(reply);
+            pthread_mutex_unlock(&g_lock);
+        } else if (strncmp(line, "HPGAIN ", 7) == 0) {
+            int g = atoi(line + 7);
+            if (g < 0) g = 0;
+            if (g > 35) g = 35;
+            pthread_mutex_lock(&g_lock);
+            char g_str[16];
+            snprintf(g_str, sizeof(g_str), "%d", g);
+            tinymix_set3("HP Driver Gain Volume", g_str, g_str);
+            snprintf(reply, sizeof(reply), "OK HPGAIN %d\n", g);
             send_ctrl_line_locked(reply);
             pthread_mutex_unlock(&g_lock);
         } else if (strncmp(line, "MUTE ", 5) == 0) {
