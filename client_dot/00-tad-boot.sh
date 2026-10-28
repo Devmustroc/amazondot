@@ -43,10 +43,16 @@ for adc in A B C D; do
     tinymix "ADC_${adc} Digital Volume Control" 64 64 2>/dev/null
 done
 
+tinymix "biquad coefficients" 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 127 247 0 0 128 9 0 0 127 239 0 0 0 17 0 0 0 17 0 0 127 222 0 0 15 0 0 2>/dev/null
+tinymix "Audio_DacMux_Setting" Off 2>/dev/null
+tinymix "Right Channel Only" On 2>/dev/null
 tinymix "HPL Output Mixer L_DAC Switch" 1 2>/dev/null
 tinymix "HPR Output Mixer R_DAC Switch" 1 2>/dev/null
-tinymix "Right Channel Only" On 2>/dev/null
-tinymix "HP Driver Gain Volume" 21 21 2>/dev/null
+tinymix "LOL Output Mixer L_DAC Switch" 1 2>/dev/null
+tinymix "LOR Output Mixer R_DAC Switch" 1 2>/dev/null
+tinymix "HP DAC Playback Switch" 1 1 2>/dev/null
+tinymix "HP Driver Gain Volume" 25 25 2>/dev/null
+tinymix "MFP Gpio Mute" Off 2>/dev/null
 tinymix Audio_Amp_R_Switch Off 2>/dev/null
 tinymix Audio_Amp_L_Switch Off 2>/dev/null
 tinymix Speaker_Amp_Switch Off 2>/dev/null
@@ -115,10 +121,16 @@ chmod 755 /data/adb/tad_dotd 2>/dev/null
         tinymix "ADC_${adc} MICPGA Volume Ctrl" 60 60 2>/dev/null
         tinymix "ADC_${adc} Digital Volume Control" 64 64 2>/dev/null
     done
+    tinymix "biquad coefficients" 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 128 0 1 0 0 0 0 0 0 0 0 0 0 0 0 127 247 0 0 128 9 0 0 127 239 0 0 0 17 0 0 0 17 0 0 127 222 0 0 15 0 0 2>/dev/null
+    tinymix "Audio_DacMux_Setting" Off 2>/dev/null
+    tinymix "Right Channel Only" On 2>/dev/null
     tinymix "HPL Output Mixer L_DAC Switch" 1 2>/dev/null
     tinymix "HPR Output Mixer R_DAC Switch" 1 2>/dev/null
-    tinymix "Right Channel Only" On 2>/dev/null
-    tinymix "HP Driver Gain Volume" 21 21 2>/dev/null
+    tinymix "LOL Output Mixer L_DAC Switch" 1 2>/dev/null
+    tinymix "LOR Output Mixer R_DAC Switch" 1 2>/dev/null
+    tinymix "HP DAC Playback Switch" 1 1 2>/dev/null
+    tinymix "HP Driver Gain Volume" 25 25 2>/dev/null
+    tinymix "MFP Gpio Mute" Off 2>/dev/null
 
     /system/bin/ledctrl -s solid_green -b 50 2>/dev/null
 
