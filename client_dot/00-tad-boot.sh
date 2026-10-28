@@ -6,9 +6,10 @@ set -x
 # Installed in: /data/adb/service.d/00-tad-boot.sh (Magisk autostart)
 # ==============================================================================
 
-# 1. Open Firewall (ADB 5555 & Mic Stream 9000)
+# 1. Open Firewall (ADB 5555, Mic Stream 9000 & Control/Playback 9001)
 iptables -I INPUT 1 -p tcp --dport 5555 -j ACCEPT 2>/dev/null
 iptables -I INPUT 1 -p tcp --dport 9000 -j ACCEPT 2>/dev/null
+iptables -I INPUT 1 -p tcp --dport 9001 -j ACCEPT 2>/dev/null
 iptables -I INPUT 1 -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
 
 # 2. Wireless ADB properties
@@ -23,7 +24,7 @@ if [ -f /data/adb/active-talking-cyberpunk.animation ]; then
     mount -o bind /data/adb/active-talking-cyberpunk.animation /system/etc/led-resources/active-talking.animation 2>/dev/null
 fi
 /system/bin/ledctrl -c 2>/dev/null
-/system/bin/ledctrl -s solid_green -b 50 2>/dev/null
+/system/bin/ledctrl -s solid_green -b 40 2>/dev/null
 
 tinymix "MFP Gpio Mute" Off 2>/dev/null
 tinymix "ADCFGA Left Mute Switch" 0 2>/dev/null
@@ -45,34 +46,26 @@ done
 tinymix "HPL Output Mixer L_DAC Switch" 1 2>/dev/null
 tinymix "HPR Output Mixer R_DAC Switch" 1 2>/dev/null
 tinymix "Right Channel Only" On 2>/dev/null
-tinymix "HP Driver Gain Volume" 18 18 2>/dev/null
+tinymix "HP Driver Gain Volume" 21 21 2>/dev/null
 tinymix Audio_Amp_R_Switch Off 2>/dev/null
 tinymix Audio_Amp_L_Switch Off 2>/dev/null
 tinymix Speaker_Amp_Switch Off 2>/dev/null
 tinymix Ext_Speaker_Amp_Switch Off 2>/dev/null
 
-# 4. Physical Buttons Daemon (Mute, Volume +, Volume -, Action)
-chmod 755 /data/adb/tad_buttonsd 2>/dev/null
-nohup /data/adb/tad_buttonsd >/data/adb/tad_buttons.log 2>&1 &
+# 4. Unified Native Daemon tad_dotd (Buttons + TCP :9000 Mic + TCP :9001 Control/Playback)
+/data/local/tmp/busybox killall -9 tad_buttonsd tad_dotd nc tinycap 2>/dev/null
+chmod 755 /data/adb/tad_dotd 2>/dev/null
+/data/adb/tad_dotd
 
-# 5. Persistent Mic Stream Server on Port 9000
-STREAM_HELPER="/data/adb/tad_stream_worker.sh"
-cat << 'HELPER_EOF' > ${STREAM_HELPER}
-#!/system/bin/sh
-PIPE="/data/local/tmp/tad_stream_$$.fifo"
-rm -f $PIPE
-/data/local/tmp/busybox mkfifo $PIPE
-tinycap $PIPE -D 0 -d 24 -c 9 -r 16000 -b 24 -f -p 1024 -n 2 &
-PID_CAP=$!
-trap "kill -9 $PID_CAP 2>/dev/null; rm -f $PIPE" EXIT INT TERM
-cat $PIPE
-kill -9 $PID_CAP 2>/dev/null
-rm -f $PIPE
-HELPER_EOF
-chmod 755 ${STREAM_HELPER}
-
-/data/local/tmp/busybox fuser -k 9000/tcp 2>/dev/null
-nohup /data/local/tmp/busybox sh -c "while true; do /data/local/tmp/busybox nc -l -p 9000 -e ${STREAM_HELPER}; sleep 0.2; done" >/dev/null 2>&1 &
+# 5. Watchdog ensuring tad_dotd stays alive 24/7
+(
+    while true; do
+        sleep 10
+        if ! /data/local/tmp/busybox pidof tad_dotd >/dev/null 2>&1; then
+            /data/adb/tad_dotd
+        fi
+    done
+) >/dev/null 2>&1 &
 
 # 5. Background Bloatware Cleaner (Waits for Android Framework to complete boot)
 (
