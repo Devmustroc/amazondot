@@ -133,14 +133,10 @@ static void speaker_amp_enable_locked(void) {
     tinymix_set2("LOR Output Mixer R_DAC Switch", "1");
     tinymix_set3("HP DAC Playback Switch", "1", "1");
     tinymix_set3("LO DAC Playback Switch", "1", "1");
-    tinymix_set2("Audio_Amp_R_Switch", "On");
-    tinymix_set2("Audio_Amp_L_Switch", "On");
-    tinymix_set2("Speaker_Amp_Switch", "On");
-    tinymix_set2("Ext_Speaker_Amp_Switch", "On");
-    tinymix_set2("MFP Gpio Mute", "Off");
 }
 
 static void speaker_amp_disable(void) {
+    tinymix_set2("MFP Gpio Mute", "On");
     tinymix_set2("Speaker_Amp_Switch", "Off");
     tinymix_set2("Ext_Speaker_Amp_Switch", "Off");
     tinymix_set2("Audio_Amp_R_Switch", "Off");
