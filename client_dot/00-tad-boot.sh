@@ -26,7 +26,7 @@ fi
 /system/bin/ledctrl -c 2>/dev/null
 /system/bin/ledctrl -s solid_green -b 40 2>/dev/null
 
-tinymix "MFP Gpio Mute" Off 2>/dev/null
+tinymix "MFP Gpio Mute" On 2>/dev/null
 tinymix "ADCFGA Left Mute Switch" 0 2>/dev/null
 tinymix "ADCFGA Right Mute Switch" 0 2>/dev/null
 tinymix "Mic PGA Switch" 1 1 2>/dev/null
@@ -52,7 +52,7 @@ tinymix "LOL Output Mixer L_DAC Switch" 1 2>/dev/null
 tinymix "LOR Output Mixer R_DAC Switch" 1 2>/dev/null
 tinymix "HP DAC Playback Switch" 1 1 2>/dev/null
 tinymix "HP Driver Gain Volume" 25 25 2>/dev/null
-tinymix "MFP Gpio Mute" Off 2>/dev/null
+tinymix "MFP Gpio Mute" On 2>/dev/null
 tinymix Audio_Amp_R_Switch Off 2>/dev/null
 tinymix Audio_Amp_L_Switch Off 2>/dev/null
 tinymix Speaker_Amp_Switch Off 2>/dev/null
@@ -106,7 +106,7 @@ chmod 755 /data/adb/tad_dotd 2>/dev/null
     done
 
     # Re-apply ALSA mixer routes once bloatware is killed
-    tinymix "MFP Gpio Mute" Off 2>/dev/null
+    tinymix "MFP Gpio Mute" On 2>/dev/null
     tinymix "ADCFGA Left Mute Switch" 0 2>/dev/null
     tinymix "ADCFGA Right Mute Switch" 0 2>/dev/null
     tinymix "Mic PGA Switch" 1 1 2>/dev/null
@@ -130,7 +130,7 @@ chmod 755 /data/adb/tad_dotd 2>/dev/null
     tinymix "LOR Output Mixer R_DAC Switch" 1 2>/dev/null
     tinymix "HP DAC Playback Switch" 1 1 2>/dev/null
     tinymix "HP Driver Gain Volume" 25 25 2>/dev/null
-    tinymix "MFP Gpio Mute" Off 2>/dev/null
+    tinymix "MFP Gpio Mute" On 2>/dev/null
 
     /system/bin/ledctrl -s solid_green -b 50 2>/dev/null
 
