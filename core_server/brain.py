@@ -4,12 +4,14 @@ Integrates Whisper Speech-to-Text, Gemini AI LLM inference, and Edge-TTS synthes
 """
 import io
 import os
+import json
 import logging
 import asyncio
 import numpy as np
 import scipy.signal as sps
 import soundfile as sf
 import edge_tts
+from typing import Optional
 from faster_whisper import WhisperModel
 from openai import OpenAI
 from core_server import config
@@ -150,7 +152,7 @@ class Brain:
             logger.warning("Local Ollama query failed: %s", e)
         return None
 
-    def generate_response(self, prompt: str) -> str:
+    async def generate_response(self, prompt: str) -> str:
         """
         Processes user prompt via Hybrid Decision Engine:
         - Instant Intents: clock time, date, identity (0ms latency, zero hallucination).
@@ -214,7 +216,8 @@ class Brain:
         # A. Try Local Ollama first if prompt is simple/routine
         if not is_complex:
             logger.info("Routing simple/routine prompt to Local Ollama (%s)...", self.ollama_model)
-            ollama_reply = self._query_ollama(messages)
+            loop = asyncio.get_running_loop()
+            ollama_reply = await loop.run_in_executor(None, self._query_ollama, messages)
             if ollama_reply:
                 self.history.append({"role": "user", "content": prompt})
                 self.history.append({"role": "assistant", "content": ollama_reply})
@@ -234,7 +237,10 @@ class Brain:
                 if tools:
                     kwargs["tools"] = tools
 
-                response = self.llm_client.chat.completions.create(**kwargs)
+                loop = asyncio.get_running_loop()
+                response = await loop.run_in_executor(
+                    None, lambda: self.llm_client.chat.completions.create(**kwargs)
+                )
                 message = response.choices[0].message
 
                 # Handle tool calls if returned
@@ -246,8 +252,7 @@ class Brain:
                         except Exception:
                             args = {}
                         logger.info("LLM triggered tool: %s with args: %s", func_name, args)
-                        loop = asyncio.get_event_loop()
-                        tool_res = loop.run_until_complete(self.mcp.call_tool(func_name, args))
+                        tool_res = await self.mcp.call_tool(func_name, args)
                         messages.append(message)
                         messages.append({
                             "role": "tool",
@@ -256,10 +261,13 @@ class Brain:
                         })
 
                     # Second turn after tool output
-                    second_resp = self.llm_client.chat.completions.create(
-                        model=config.OPENROUTER_MODEL,
-                        messages=messages,
-                        max_tokens=256
+                    second_resp = await loop.run_in_executor(
+                        None,
+                        lambda: self.llm_client.chat.completions.create(
+                            model=config.OPENROUTER_MODEL,
+                            messages=messages,
+                            max_tokens=256,
+                        ),
                     )
                     reply = second_resp.choices[0].message.content.strip()
                 else:
@@ -273,7 +281,8 @@ class Brain:
                 logger.error("OpenRouter JEV call failed, trying local fallback: %s", e)
 
         # C. Fallback to Local Ollama if not already tried
-        ollama_reply = self._query_ollama(messages)
+        loop = asyncio.get_running_loop()
+        ollama_reply = await loop.run_in_executor(None, self._query_ollama, messages)
         if ollama_reply:
             return ollama_reply
 
