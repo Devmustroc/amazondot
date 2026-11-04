@@ -1,0 +1,23 @@
+services:
+  claude-code:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: amazondot-claude-code
+    working_dir: /workspaces/amazondot
+    stdin_open: true
+    tty: true
+    volumes:
+      - ..:/workspaces/amazondot
+      - claude-code-config:/home/node/.claude
+      - claude-code-anthropic:/home/node/.anthropic
+      - ${HOME}/.gitconfig:/home/node/.gitconfig:ro
+      - ${HOME}/.ssh:/home/node/.ssh:ro
+    environment:
+      - TERM=xterm-256color
+
+volumes:
+  claude-code-config:
+    name: claude-code-config
+  claude-code-anthropic:
+    name: claude-code-anthropic
