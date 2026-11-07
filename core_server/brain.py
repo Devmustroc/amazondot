@@ -294,60 +294,16 @@ class Brain:
 
     async def synthesize_speech(self, text: str) -> bytes:
         """
-        Synthesizes text to crystal-clear 48kHz 16-bit stereo WAV.
-        Uses OpenRouter google/gemini-3.8-flash-lite-tts first, with Edge-TTS as fallback.
+        Synthesizes text to crystal-clear 48kHz 16-bit stereo WAV via Edge-TTS.
+        Uses a consistent French neural voice (defaults to gentle female voice: fr-FR-EloiseNeural).
         Includes acoustic filtering and peak limiting to prevent physical speaker rattling/saturation.
         """
         if not text.strip():
             return b""
 
-        logger.info("Synthesizing speech: '%s'", text)
+        logger.info("Synthesizing speech via Edge-TTS (%s): '%s'", config.TTS_VOICE, text)
 
-        # 1. Try OpenRouter Gemini TTS (google/gemini-3.8-flash-lite-tts)
-        if config.OPENROUTER_API_KEY:
-            try:
-                import requests
-                headers = {
-                    "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                }
-                payload = {
-                    "model": config.OPENROUTER_TTS_MODEL,
-                    "input": text,
-                    "voice": config.OPENROUTER_TTS_VOICE,
-                    "response_format": "pcm",
-                }
-                logger.info("Requesting Gemini TTS from OpenRouter (%s, voice=%s)...",
-                            config.OPENROUTER_TTS_MODEL, config.OPENROUTER_TTS_VOICE)
-
-                loop = asyncio.get_running_loop()
-                r = await loop.run_in_executor(
-                    None,
-                    lambda: requests.post(
-                        "https://openrouter.ai/api/v1/audio/speech",
-                        headers=headers,
-                        json=payload,
-                        timeout=12
-                    )
-                )
-
-                if r.status_code == 200 and len(r.content) > 0:
-                    raw_pcm = r.content
-                    logger.info("Gemini TTS returned %d bytes PCM (24kHz mono)", len(raw_pcm))
-                    # Gemini returns 24kHz 16-bit mono PCM, convert to float in [-1.0, 1.0]
-                    s16_mono = np.frombuffer(raw_pcm, dtype=np.int16).astype(np.float32) / 32768.0
-                    wav_data = process_audio_for_echo_dot(s16_mono, 24000)
-                    logger.info("Acoustically processed Gemini TTS audio (%d bytes)", len(wav_data))
-                    return wav_data
-                else:
-                    logger.warning("OpenRouter TTS returned HTTP %d: %s. Using Edge-TTS fallback.",
-                                   r.status_code, r.text[:200])
-            except Exception as e:
-                logger.warning("OpenRouter TTS failed (%s). Falling back to Edge-TTS.", e)
-
-        # 2. Fallback: Edge-TTS
         try:
-            logger.info("Synthesizing speech via Edge-TTS fallback (%s)...", config.TTS_VOICE)
             comm = edge_tts.Communicate(text, config.TTS_VOICE)
             mp3_stream = bytearray()
             async for chunk in comm.stream():

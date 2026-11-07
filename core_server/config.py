@@ -37,7 +37,7 @@ WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
 
 # Speech-to-Text & Text-to-Speech
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")
-TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-DeniseNeural")
+TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-EloiseNeural")
 
 # LLM & Brain (OpenRouter)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
