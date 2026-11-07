@@ -37,7 +37,7 @@ WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
 
 # Speech-to-Text & Text-to-Speech
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")
-TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-EloiseNeural")
+TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-VivienneMultilingualNeural")
 
 # LLM & Brain (OpenRouter)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
@@ -47,7 +47,7 @@ OPENROUTER_TTS_VOICE = os.getenv("OPENROUTER_TTS_VOICE", "Puck")
 
 # System Prompt for TAD
 SYSTEM_PROMPT = """Tu t'appelles Régis. Tu es l'assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.
-Réponds toujours en français de façon naturelle, précise et brève (1 à 3 phrases maximum), car tes réponses sont prononcées à voix haute."""
+Réponds toujours en français métropolitain standard (de France), sans aucun accent régional ni expression québécoise, de façon calme, douce, précise et brève (1 à 2 phrases maximum), car tes réponses sont prononcées à voix haute."""
 # Continuous Conversation (Follow-up Mode)
 FOLLOWUP_TIMEOUT_SEC = float(os.getenv("FOLLOWUP_TIMEOUT_SEC", "10.0"))
 CLOSING_WORDS = ["merci", "c'est bon", "stop", "au revoir", "bonne journée", "bonne nuit", "à plus", "rien", "c'est tout", "non c'est bon"]

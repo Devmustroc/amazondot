@@ -210,7 +210,8 @@ class Brain:
 
         # 2. Fast Router Classifier: Decide whether to route locally or to JEV
         complex_triggers = ["cherche", "recherche", "suricate", "suricata", "proxmox", "opensense", "opnsense",
-                            "notion", "firewall", "internet", "pourquoi", "explique", "détaille", "compare", "météo de demain"]
+                            "notion", "firewall", "internet", "pourquoi", "explique", "détaille", "compare",
+                            "météo de demain", "homelab", "serveur", "serveurs", "vm", "conteneur", "docker"]
         is_complex = any(k in p_lower for k in complex_triggers) or len(prompt.split()) > 14
 
         # A. Try Local Ollama first if prompt is simple/routine
@@ -295,7 +296,7 @@ class Brain:
     async def synthesize_speech(self, text: str) -> bytes:
         """
         Synthesizes text to crystal-clear 48kHz 16-bit stereo WAV via Edge-TTS.
-        Uses a consistent French neural voice (defaults to gentle female voice: fr-FR-EloiseNeural).
+        Uses a consistent French neural voice (defaults to gentle female voice: fr-FR-VivienneMultilingualNeural).
         Includes acoustic filtering and peak limiting to prevent physical speaker rattling/saturation.
         """
         if not text.strip():
