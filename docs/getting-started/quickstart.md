@@ -11,7 +11,7 @@ Le mode émulateur remplace la connexion TCP de l'Echo Dot par une passerelle au
 ### 1. Cloner le Dépôt
 
 ```bash
-git clone https://github.com/mustroc/amazondot.git
+git clone https://github.com/Devmustroc/amazondot.git
 cd amazondot
 ```
 

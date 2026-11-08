@@ -1,6 +1,6 @@
 [Unit]
 Description=TAD Core — Sovereign Amazon Echo Dot Voice Assistant (Native Systemd Daemon)
-Documentation=https://github.com/mustroc/amazondot
+Documentation=https://github.com/Devmustroc/amazondot
 After=network-online.target
 Wants=network-online.target
 

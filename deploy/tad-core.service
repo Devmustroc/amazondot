@@ -1,6 +1,6 @@
 [Unit]
 Description=TAD Core — Sovereign Amazon Echo Dot Voice Assistant (Docker Service)
-Documentation=https://github.com/mustroc/amazondot
+Documentation=https://github.com/Devmustroc/amazondot
 After=network-online.target docker.service
 Wants=network-online.target docker.service
 

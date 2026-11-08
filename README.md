@@ -83,8 +83,8 @@ flowchart LR
 ### 1. Clone & Setup Environment
 
 ```bash
-git clone https://github.com/mustroc/sovereigndot.git
-cd sovereigndot
+git clone https://github.com/Devmustroc/amazondot.git
+cd amazondot
 cp .env.example .env
 ```
 
@@ -150,4 +150,4 @@ python -m unittest discover tests
 Licensed under the **Apache License, Version 2.0**. See [`LICENSE`](LICENSE) for details.
 
 Copyright © 2026 **Mustroc / El Mustapha**. Built with passion for open-source AI sovereignty.
-Proudly supporting the ecosystem of [Mamitales](https://github.com/mustroc).
+Proudly supporting the ecosystem of [Mamitales](https://github.com/Devmustroc/mamitales).
