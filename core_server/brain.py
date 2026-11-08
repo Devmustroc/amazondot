@@ -18,6 +18,7 @@ import edge_tts
 from faster_whisper import WhisperModel
 from openai import OpenAI, AsyncOpenAI
 from core_server import config
+from core_server import homelab_tools
 
 logger = logging.getLogger("brain")
 
@@ -246,6 +247,44 @@ class Brain:
             fact_text = learn_match.group(2).strip()
             self.obsidian.record_fact("Famille", fact_text)
             reply = f"C'est bien noté dans ma mémoire, j'ai enregistré que {fact_text}."
+            yield reply
+            return
+
+        # 5. Instant Intent: État du serveur Proxmox
+        if any(k in p_lower for k in ["état du serveur", "etat du serveur", "serveur proxmox", "état de proxmox", "etat de proxmox", "statut proxmox", "charge du serveur", "comment va le serveur", "santé du serveur"]):
+            reply = await homelab_tools.get_proxmox_status_spoken()
+            logger.info("Instant Proxmox SRE Intent: '%s'", reply)
+            yield reply
+            return
+
+        # 6. Instant Intent: Machines Virtuelles & Conteneurs LXC
+        if any(k in p_lower for k in ["machines virtuelles", "combien de vm", "liste des vm", "liste des conteneurs lxc", "ressources du cluster"]):
+            reply = await homelab_tools.get_cluster_resources_spoken()
+            logger.info("Instant Cluster Resources Intent: '%s'", reply)
+            yield reply
+            return
+
+        # 7. Instant Intent: Conteneurs Docker Globaux
+        if any(k in p_lower for k in ["conteneurs docker", "état de docker", "etat de docker", "conteneurs tournent", "liste des conteneurs", "docker sur ct"]):
+            reply = await homelab_tools.get_docker_status_spoken()
+            logger.info("Instant Docker Status Intent: '%s'", reply)
+            yield reply
+            return
+
+        # 8. Instant Intent: Conteneurs Spécifiques
+        if any(k in p_lower for k in ["tourne mamitales", "état de mamitales", "etat de mamitales", "mamitales tourne", "mamitales backend"]):
+            reply = await homelab_tools.get_docker_status_spoken(container_name="mamitales-backend")
+            logger.info("Instant Specific Container Intent: '%s'", reply)
+            yield reply
+            return
+        if any(k in p_lower for k in ["état de immich", "etat de immich", "immich tourne", "serveur immich"]):
+            reply = await homelab_tools.get_docker_status_spoken(container_name="immich_server")
+            logger.info("Instant Specific Container Intent: '%s'", reply)
+            yield reply
+            return
+        if any(k in p_lower for k in ["état de vaultwarden", "etat de vaultwarden", "vaultwarden tourne", "mots de passe"]):
+            reply = await homelab_tools.get_docker_status_spoken(container_name="vaultwarden")
+            logger.info("Instant Specific Container Intent: '%s'", reply)
             yield reply
             return
 

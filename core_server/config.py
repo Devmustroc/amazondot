@@ -41,6 +41,11 @@ WHISPER_BEAM_SIZE = int(os.getenv("WHISPER_BEAM_SIZE", "1")) # 1 = fast greedy d
 TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-VivienneMultilingualNeural")
 TTS_CACHE_ENABLED = os.getenv("TTS_CACHE_ENABLED", "true").lower() == "true"
 
+# Homelab & Proxmox SRE Configuration
+PROXMOX_HOST = os.getenv("PROXMOX_HOST", "192.168.1.200")
+PROXMOX_SSH_USER = os.getenv("PROXMOX_SSH_USER", "root")
+PROXMOX_SSH_KEY = os.getenv("PROXMOX_SSH_KEY", str(Path.home() / ".ssh" / "id_ed25519"))
+
 # LLM & Brain (OpenRouter)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-3.8-flash")

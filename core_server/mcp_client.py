@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, List, Any, Optional
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from core_server import homelab_tools
 
 logger = logging.getLogger("mcp_client")
 
@@ -20,6 +21,42 @@ class McpManager:
         self.tool_to_server: Dict[str, str] = {}
         self.sessions: Dict[str, ClientSession] = {}
         self._exit_stack = None
+
+        # Built-in Native Homelab SRE Tools (Always Available)
+        self.native_tools: List[Dict[str, Any]] = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_get_proxmox_status",
+                    "description": "Obtient l'état en direct du serveur Proxmox VE (charge CPU, RAM, uptime, version).",
+                    "parameters": {"type": "object", "properties": {}}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_get_cluster_resources",
+                    "description": "Liste les machines virtuelles (VMs) et conteneurs LXC actifs sur le cluster Proxmox.",
+                    "parameters": {"type": "object", "properties": {}}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_get_docker_status",
+                    "description": "Obtient la liste et l'état des conteneurs Docker en cours d'exécution sur le homelab (CT 105).",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "container_name": {
+                                "type": "string",
+                                "description": "Nom optionnel d'un conteneur spécifique à inspecter (ex: mamitales-backend, immich_server, caddy-caddy-1)."
+                            }
+                        }
+                    }
+                }
+            }
+        ]
 
     async def initialize(self):
         """Reads mcp_config.json and establishes sessions with active MCP servers."""
@@ -107,10 +144,28 @@ class McpManager:
 
     def get_openai_tools(self) -> List[Dict[str, Any]]:
         """Returns the list of loaded MCP tools formatted for OpenAI / OpenRouter function calling."""
-        return self.tools
+        return self.native_tools + self.tools
 
     async def call_tool(self, namespaced_name: str, arguments: Dict[str, Any]) -> str:
-        """Executes a tool on the designated MCP server."""
+        """Executes a tool: either a built-in Homelab SRE tool or on an external MCP server."""
+        # 1. Built-in Homelab SRE tools
+        if namespaced_name == "homelab_get_proxmox_status":
+            spoken = await homelab_tools.get_proxmox_status_spoken()
+            raw = await homelab_tools.get_proxmox_status()
+            return f"Résumé: {spoken}\nMétriques: {json.dumps(raw, ensure_ascii=False)}"
+
+        if namespaced_name == "homelab_get_cluster_resources":
+            spoken = await homelab_tools.get_cluster_resources_spoken()
+            raw = await homelab_tools.get_cluster_resources()
+            return f"Résumé: {spoken}\nRessources: {json.dumps(raw, ensure_ascii=False)}"
+
+        if namespaced_name == "homelab_get_docker_status":
+            c_name = arguments.get("container_name")
+            spoken = await homelab_tools.get_docker_status_spoken(container_name=c_name)
+            raw = await homelab_tools.get_docker_status(container_name=c_name)
+            return f"Résumé: {spoken}\nDétails: {json.dumps(raw, ensure_ascii=False)}"
+
+        # 2. External MCP server tools
         if namespaced_name not in self.tool_to_server:
             return f"Error: Tool '{namespaced_name}' not found."
 
