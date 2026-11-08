@@ -19,6 +19,7 @@ from faster_whisper import WhisperModel
 from openai import OpenAI, AsyncOpenAI
 from core_server import config
 from core_server import homelab_tools
+from core_server.intents import global_intent_registry, IntentContext
 
 logger = logging.getLogger("brain")
 
@@ -248,106 +249,20 @@ class Brain:
         from datetime import datetime
         now = datetime.now()
 
-        # VoiceID Intent: Qui suis-je / qui parle
-        if any(k in clean_p_lower for k in ["qui suis-je", "qui est-ce qui parle", "qui parle", "reconnais-tu ma voix", "tu reconnais ma voix"]):
-            reply = f"D'après ton empreinte vocale, tu es {speaker.name}, avec le profil {speaker.role.value}."
-            logger.info("Instant VoiceID Speaker Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 1. Instant Intent: Heure actuelle
-        if any(k in clean_p_lower for k in ["heure est-il", "l'heure", "il est quelle heure", "donne-moi l'heure", "donne l'heure"]):
-            h = now.hour
-            m = now.minute
-            m_str = "pile" if m == 0 else f"{m:02d}" if m < 10 else str(m)
-            h_str = f"{h} heure{'s' if h > 1 else ''}"
-            reply = f"Il est actuellement {h_str} {m_str}."
-            logger.info("Instant Time Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 2. Instant Intent: Date et Jour actuel
-        if any(k in clean_p_lower for k in ["quel jour", "la date", "date d'aujourd'hui", "on est quel jour"]):
-            jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
-            mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
-            reply = f"Nous sommes le {jours[now.weekday()]} {now.day} {mois[now.month - 1]} {now.year}."
-            logger.info("Instant Date Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 3. Instant Intent: Identité
-        if any(k in clean_p_lower for k in ["qui es-tu", "comment tu t'appelles", "présente-toi", "t'es qui"]):
-            reply = "Je m'appelle Régis, je suis l'assistant vocal IA familial pour la maison de El Mustapha."
-            yield reply
-            return
-
-        # 4. Fact Learning in Obsidian Vault
-        learn_match = re.search(r'(retiens que|souviens-toi que|note que|enregistre que|n\'oublie pas que)\s+(.*)', clean_prompt, flags=re.IGNORECASE)
-        if learn_match:
-            fact_text = learn_match.group(2).strip()
-            res = self.obsidian.record_fact(fact=fact_text)
-            cat = res.get("category", "Famille")
-            reply = f"C'est bien noté dans ma mémoire {cat}, j'ai enregistré que {fact_text}."
-            logger.info("Instant Memory Fact Learning: '%s'", reply)
-            yield reply
-            return
-
-        # 4b. Recall Voice Intent from Obsidian Memory
-        recall_match = re.search(r'^(que\s+sais-tu\s+sur|qu\'est-ce\s+que\s+tu\s+sais\s+sur|rappelle-moi\s+(ce\s+que\s+j\'ai\s+dit\s+sur|sur)?|parle-moi\s+de)\s*(.*)', clean_p_lower, flags=re.IGNORECASE)
-        if recall_match:
-            topic = recall_match.group(len(recall_match.groups())).strip()
-            topic = re.sub(r'[.?!\s]+$', '', topic).strip()
-            if len(topic) >= 2:
-                reply = self.obsidian.recall_memory_spoken(topic)
-                logger.info("Instant Memory Recall: '%s'", reply)
+        # Dispatch through decoupled Voice Intent Registry (Extensible Skills)
+        intent_ctx = IntentContext(
+            prompt=prompt,
+            clean_prompt=clean_prompt,
+            speaker=speaker,
+            obsidian=self.obsidian,
+            circuit_breaker=self.circuit_breaker,
+            mcp=self.mcp,
+        )
+        intent_generator = await global_intent_registry.handle_prompt(intent_ctx)
+        if intent_generator is not None:
+            async for reply in intent_generator:
+                logger.info("Intent Executed Spoken Response: '%s'", reply)
                 yield reply
-                return
-
-        # 5. Instant Intent: État du serveur Proxmox
-        if any(k in p_lower for k in ["état du serveur", "etat du serveur", "serveur proxmox", "état de proxmox", "etat de proxmox", "statut proxmox", "charge du serveur", "comment va le serveur", "santé du serveur"]):
-            reply = await homelab_tools.get_proxmox_status_spoken()
-            logger.info("Instant Proxmox SRE Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 6. Instant Intent: Machines Virtuelles & Conteneurs LXC
-        if any(k in p_lower for k in ["machines virtuelles", "combien de vm", "liste des vm", "liste des conteneurs lxc", "ressources du cluster"]):
-            reply = await homelab_tools.get_cluster_resources_spoken()
-            logger.info("Instant Cluster Resources Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 7. Instant Intent: Conteneurs Docker Globaux
-        if any(k in p_lower for k in ["conteneurs docker", "état de docker", "etat de docker", "conteneurs tournent", "liste des conteneurs", "docker sur ct"]):
-            reply = await homelab_tools.get_docker_status_spoken()
-            logger.info("Instant Docker Status Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 8. Instant Intent: Conteneurs Spécifiques
-        if any(k in p_lower for k in ["tourne mamitales", "état de mamitales", "etat de mamitales", "mamitales tourne", "mamitales backend"]):
-            reply = await homelab_tools.get_docker_status_spoken(container_name="mamitales-backend")
-            logger.info("Instant Specific Container Intent: '%s'", reply)
-            yield reply
-            return
-        if any(k in p_lower for k in ["état de immich", "etat de immich", "immich tourne", "serveur immich"]):
-            reply = await homelab_tools.get_docker_status_spoken(container_name="immich_server")
-            logger.info("Instant Specific Container Intent: '%s'", reply)
-            yield reply
-            return
-        if any(k in p_lower for k in ["état de vaultwarden", "etat de vaultwarden", "vaultwarden tourne", "mots de passe"]):
-            reply = await homelab_tools.get_docker_status_spoken(container_name="vaultwarden")
-            logger.info("Instant Specific Container Intent: '%s'", reply)
-            yield reply
-            return
-
-        # 9. Instant Intent: État du Réseau & Résilience Hors-Ligne (Circuit Breaker)
-        if any(k in p_lower for k in ["état du réseau", "etat du reseau", "mode hors ligne", "statut de connexion", "circuit breaker", "santé réseau", "secours vocal"]):
-            st = self.circuit_breaker.get_status()
-            state_fr = "connecté au cloud" if st["state"] == "CLOSED" else "hors ligne avec repli local Piper ONNX" if st["state"] == "OPEN" else "en test de reconnexion cloud"
-            reply = f"Le circuit réseau est {st['state']}. Nous sommes {state_fr}. {st['total_fallbacks']} bascules de secours enregistrées."
-            logger.info("Instant Network Resilience Intent: '%s'", reply)
-            yield reply
             return
 
         # Build dynamic system prompt with live date/time, speaker identity and query-relevant Obsidian knowledge
