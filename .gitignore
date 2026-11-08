@@ -15,6 +15,7 @@ tools/amonet-biscuit/
 .env.local
 core_server/tts_cache/
 core_server/models/
+core_server/data/
 *.log
 *.mp3
 tools/framework.jar

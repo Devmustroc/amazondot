@@ -28,6 +28,7 @@ class TadAssistant:
         self.processor = AudioProcessor(wake_model_name=config.WAKE_WORD_MODEL)
         self.brain = Brain()
         self.running = False
+        self.last_speech_pcm: Optional[bytes] = None
 
     async def run(self):
         self.running = True
@@ -121,6 +122,7 @@ class TadAssistant:
                         pass
 
                     if len(cand_bytes) >= 16000:
+                        self.last_speech_pcm = cand_bytes
                         text = self.brain.transcribe(cand_bytes)
                         text_lower = text.lower()
                         logger.info("Candidate speech: '%s'", text)
@@ -194,6 +196,7 @@ class TadAssistant:
         if not speech_started or len(speech_pcm) < 16000:
             return ""
 
+        self.last_speech_pcm = bytes(speech_pcm)
         await self.bridge.set_led("solid_cyan", brightness=80)
         return self.brain.transcribe(bytes(speech_pcm)).strip()
 
@@ -245,13 +248,13 @@ class TadAssistant:
 
             # Stream response chunks directly to speaker with concurrent TTS
             await self.bridge.set_led("solid_cyan", brightness=80)
-            await self.stream_response_to_speaker(cleaned_text)
+            await self.stream_response_to_speaker(cleaned_text, speaker_audio=self.last_speech_pcm)
 
             current_text = None
 
         await self.bridge.set_led("solid_green", brightness=50)
 
-    async def stream_response_to_speaker(self, prompt: str):
+    async def stream_response_to_speaker(self, prompt: str, speaker_audio: Optional[bytes] = None):
         """
         Streams sentence chunks from Brain LLM and pipelines them directly to TTS and speaker.
         Synthesizes sentence N+1 in the background while sentence N is actively playing.
@@ -262,7 +265,7 @@ class TadAssistant:
 
         async def synth_producer():
             try:
-                async for sentence in self.brain.generate_response_stream(prompt):
+                async for sentence in self.brain.generate_response_stream(prompt, speaker_audio=speaker_audio):
                     if stop_event.is_set():
                         break
                     s_clean = sentence.strip()

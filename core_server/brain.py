@@ -60,6 +60,7 @@ def process_audio_for_echo_dot(data: np.ndarray, sr: int) -> bytes:
 from core_server.obsidian_memory import ObsidianMemory
 from core_server.mcp_client import McpManager
 from core_server.resilience import global_circuit_breaker, global_piper_engine, CircuitState
+from core_server.voice_id import global_voice_id, UserRole, SpeakerProfile
 import requests
 
 COMMON_ACK_PHRASES = [
@@ -119,6 +120,9 @@ class Brain:
         # 7. Offline Resilience Circuit Breaker & Piper TTS
         self.circuit_breaker = global_circuit_breaker
         self.piper = global_piper_engine
+
+        # 8. VoiceID & Biometric RBAC Security
+        self.voice_id = global_voice_id
 
         # In-memory conversation history
         self.history = []
@@ -210,9 +214,10 @@ class Brain:
             logger.warning("Local Ollama query failed: %s", e)
         return None
 
-    async def generate_response_stream(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def generate_response_stream(self, prompt: str, speaker_audio: Optional[bytes] = None) -> AsyncGenerator[str, None]:
         """
         Streaming generator yielding sentence-by-sentence chunks for ultra-low latency voice responses:
+        - VoiceID: Speaker identification & RBAC security check (<20ms).
         - Instant Intents: clock, date, identity, obsidian learning (0ms latency).
         - Simple Queries: Fast local Ollama with sentence splitting (<500ms).
         - Reasoning & Tools: OpenRouter / Gemini 3.8 Flash with native token-to-sentence streaming.
@@ -221,12 +226,33 @@ class Brain:
             yield "Je ne vous ai pas bien entendu, pouvez-vous répéter ?"
             return
 
-        logger.info("Evaluating prompt: '%s'", prompt)
+        # VoiceID Biometric Identification & RBAC Check
+        if speaker_audio:
+            speaker, conf = self.voice_id.identify_speaker(speaker_audio)
+        else:
+            speaker = SpeakerProfile(name="El Mustapha", role=UserRole.ADMIN, f0_mean_hz=122.0, spectral_centroid_hz=1450.0)
+            conf = 1.0
+
+        # Enforce RBAC security on prompt
+        allowed, denial_reason = self.voice_id.check_permission(speaker, prompt)
+        if not allowed:
+            logger.warning("VoiceID RBAC Blocked prompt: '%s' for speaker '%s'", prompt, speaker.name)
+            yield denial_reason
+            return
+
+        logger.info("Evaluating prompt: '%s' (Speaker: %s, Role: %s, Conf: %.2f)", prompt, speaker.name, speaker.role.value, conf)
         p_lower = prompt.lower()
         clean_prompt = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|r[ée]gi|regisse|alexa)[,\s\.]*', '', prompt, flags=re.IGNORECASE).strip() or prompt
         clean_p_lower = clean_prompt.lower()
         from datetime import datetime
         now = datetime.now()
+
+        # VoiceID Intent: Qui suis-je / qui parle
+        if any(k in clean_p_lower for k in ["qui suis-je", "qui est-ce qui parle", "qui parle", "reconnais-tu ma voix", "tu reconnais ma voix"]):
+            reply = f"D'après ton empreinte vocale, tu es {speaker.name}, avec le profil {speaker.role.value}."
+            logger.info("Instant VoiceID Speaker Intent: '%s'", reply)
+            yield reply
+            return
 
         # 1. Instant Intent: Heure actuelle
         if any(k in clean_p_lower for k in ["heure est-il", "l'heure", "il est quelle heure", "donne-moi l'heure", "donne l'heure"]):
@@ -323,10 +349,10 @@ class Brain:
             yield reply
             return
 
-        # Build dynamic system prompt with live date/time and query-relevant Obsidian knowledge
+        # Build dynamic system prompt with live date/time, speaker identity and query-relevant Obsidian knowledge
         now_str = now.strftime("%A %d %B %Y à %H:%M")
         obsidian_context = self.obsidian.get_relevant_context(prompt)
-        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\nDate et heure courantes: {now_str}\n\nContexte et mémoire connus:\n{obsidian_context}"
+        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\nDate et heure courantes: {now_str}\nLocuteur identifié: {speaker.name} (Rôle: {speaker.role.value})\n\nContexte et mémoire connus:\n{obsidian_context}"
 
         messages = [{"role": "system", "content": dynamic_system_prompt}]
         messages.extend(self.history[-6:])
@@ -436,10 +462,10 @@ class Brain:
         raw_chunks = re.split(r'(?<=[.!?])\s+', text.strip())
         return [c.strip() for c in raw_chunks if c.strip()]
 
-    async def generate_response(self, prompt: str) -> str:
+    async def generate_response(self, prompt: str, speaker_audio: Optional[bytes] = None) -> str:
         """Non-streaming backward-compatible response wrapper."""
         chunks = []
-        async for s in self.generate_response_stream(prompt):
+        async for s in self.generate_response_stream(prompt, speaker_audio=speaker_audio):
             chunks.append(s)
         return " ".join(chunks).strip()
 

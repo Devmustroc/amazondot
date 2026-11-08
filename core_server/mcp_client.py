@@ -13,6 +13,7 @@ from mcp.client.stdio import stdio_client
 from core_server import homelab_tools
 from core_server.obsidian_memory import ObsidianMemory
 from core_server.resilience import global_circuit_breaker
+from core_server.voice_id import global_voice_id
 
 logger = logging.getLogger("mcp_client")
 
@@ -102,6 +103,17 @@ class McpManager:
                 "function": {
                     "name": "homelab_get_resilience_status",
                     "description": "Retourne l'état du Circuit-Breaker réseau et le statut du repli local Piper ONNX / Ollama.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {}
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_list_voice_profiles",
+                    "description": "Liste les profils vocaux enregistrés (Adulte/Enfant) et leurs droits RBAC.",
                     "parameters": {
                         "type": "object",
                         "properties": {}
@@ -232,6 +244,10 @@ class McpManager:
         if namespaced_name == "homelab_get_resilience_status":
             st = global_circuit_breaker.get_status()
             return f"État du Circuit-Breaker: {st['state']}\nStatut: {json.dumps(st, ensure_ascii=False)}"
+
+        if namespaced_name == "homelab_list_voice_profiles":
+            profiles = global_voice_id.get_profiles_summary()
+            return f"Profils vocaux enregistrés ({len(profiles)}) :\n{json.dumps(profiles, ensure_ascii=False, indent=2)}"
 
         # 2. External MCP server tools
         if namespaced_name not in self.tool_to_server:
