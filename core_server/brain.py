@@ -212,11 +212,13 @@ class Brain:
 
         logger.info("Evaluating prompt: '%s'", prompt)
         p_lower = prompt.lower()
+        clean_prompt = re.sub(r'^(dis\s+|salut\s+|hey\s+)?(r[ée]gis|r[ée]gi|regisse|alexa)[,\s\.]*', '', prompt, flags=re.IGNORECASE).strip() or prompt
+        clean_p_lower = clean_prompt.lower()
         from datetime import datetime
         now = datetime.now()
 
         # 1. Instant Intent: Heure actuelle
-        if any(k in p_lower for k in ["heure est-il", "l'heure", "il est quelle heure", "donne-moi l'heure", "donne l'heure"]):
+        if any(k in clean_p_lower for k in ["heure est-il", "l'heure", "il est quelle heure", "donne-moi l'heure", "donne l'heure"]):
             h = now.hour
             m = now.minute
             m_str = "pile" if m == 0 else f"{m:02d}" if m < 10 else str(m)
@@ -227,7 +229,7 @@ class Brain:
             return
 
         # 2. Instant Intent: Date et Jour actuel
-        if any(k in p_lower for k in ["quel jour", "la date", "date d'aujourd'hui", "on est quel jour"]):
+        if any(k in clean_p_lower for k in ["quel jour", "la date", "date d'aujourd'hui", "on est quel jour"]):
             jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
             mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
             reply = f"Nous sommes le {jours[now.weekday()]} {now.day} {mois[now.month - 1]} {now.year}."
@@ -236,19 +238,32 @@ class Brain:
             return
 
         # 3. Instant Intent: Identité
-        if any(k in p_lower for k in ["qui es-tu", "comment tu t'appelles", "présente-toi", "t'es qui"]):
+        if any(k in clean_p_lower for k in ["qui es-tu", "comment tu t'appelles", "présente-toi", "t'es qui"]):
             reply = "Je m'appelle Régis, je suis l'assistant vocal IA familial pour la maison de El Mustapha."
             yield reply
             return
 
         # 4. Fact Learning in Obsidian Vault
-        learn_match = re.search(r'(retiens que|souviens-toi que|note que|enregistre que)\s+(.*)', p_lower)
+        learn_match = re.search(r'(retiens que|souviens-toi que|note que|enregistre que|n\'oublie pas que)\s+(.*)', clean_prompt, flags=re.IGNORECASE)
         if learn_match:
             fact_text = learn_match.group(2).strip()
-            self.obsidian.record_fact("Famille", fact_text)
-            reply = f"C'est bien noté dans ma mémoire, j'ai enregistré que {fact_text}."
+            res = self.obsidian.record_fact(fact=fact_text)
+            cat = res.get("category", "Famille")
+            reply = f"C'est bien noté dans ma mémoire {cat}, j'ai enregistré que {fact_text}."
+            logger.info("Instant Memory Fact Learning: '%s'", reply)
             yield reply
             return
+
+        # 4b. Recall Voice Intent from Obsidian Memory
+        recall_match = re.search(r'^(que\s+sais-tu\s+sur|qu\'est-ce\s+que\s+tu\s+sais\s+sur|rappelle-moi\s+(ce\s+que\s+j\'ai\s+dit\s+sur|sur)?|parle-moi\s+de)\s*(.*)', clean_p_lower, flags=re.IGNORECASE)
+        if recall_match:
+            topic = recall_match.group(len(recall_match.groups())).strip()
+            topic = re.sub(r'[.?!\s]+$', '', topic).strip()
+            if len(topic) >= 2:
+                reply = self.obsidian.recall_memory_spoken(topic)
+                logger.info("Instant Memory Recall: '%s'", reply)
+                yield reply
+                return
 
         # 5. Instant Intent: État du serveur Proxmox
         if any(k in p_lower for k in ["état du serveur", "etat du serveur", "serveur proxmox", "état de proxmox", "etat de proxmox", "statut proxmox", "charge du serveur", "comment va le serveur", "santé du serveur"]):
@@ -288,10 +303,10 @@ class Brain:
             yield reply
             return
 
-        # Build dynamic system prompt with live date/time and Obsidian knowledge
+        # Build dynamic system prompt with live date/time and query-relevant Obsidian knowledge
         now_str = now.strftime("%A %d %B %Y à %H:%M")
-        obsidian_context = self.obsidian.get_context_summary()
-        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\nDate et heure courantes: {now_str}\n\nContexte familial et Homelab connu:\n{obsidian_context}"
+        obsidian_context = self.obsidian.get_relevant_context(prompt)
+        dynamic_system_prompt = f"{config.SYSTEM_PROMPT}\nDate et heure courantes: {now_str}\n\nContexte et mémoire connus:\n{obsidian_context}"
 
         messages = [{"role": "system", "content": dynamic_system_prompt}]
         messages.extend(self.history[-6:])

@@ -11,6 +11,7 @@ from typing import Dict, List, Any, Optional
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from core_server import homelab_tools
+from core_server.obsidian_memory import ObsidianMemory
 
 logger = logging.getLogger("mcp_client")
 
@@ -21,8 +22,9 @@ class McpManager:
         self.tool_to_server: Dict[str, str] = {}
         self.sessions: Dict[str, ClientSession] = {}
         self._exit_stack = None
+        self.obsidian = ObsidianMemory()
 
-        # Built-in Native Homelab SRE Tools (Always Available)
+        # Built-in Native Homelab SRE & Memory Tools (Always Available)
         self.native_tools: List[Dict[str, Any]] = [
             {
                 "type": "function",
@@ -53,6 +55,44 @@ class McpManager:
                                 "description": "Nom optionnel d'un conteneur spécifique à inspecter (ex: mamitales-backend, immich_server, caddy-caddy-1)."
                             }
                         }
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_search_memory",
+                    "description": "Recherche des informations personnelles, faits familiaux, préférences ou configurations dans le coffre Obsidian.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "Sujet ou mot-clé recherché (ex: wifi, Ismail, café, sport, mot de passe)."
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_record_memory",
+                    "description": "Enregistre un fait ou une habitude dans le coffre Obsidian.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "fact": {
+                                "type": "string",
+                                "description": "Le fait à mémoriser (ex: 'Ismail a cours de judo le mercredi à 14h')."
+                            },
+                            "category": {
+                                "type": "string",
+                                "description": "Catégorie optionnelle (Famille, Homelab, Preferences, Projets, Notes)."
+                            }
+                        },
+                        "required": ["fact"]
                     }
                 }
             }
@@ -164,6 +204,18 @@ class McpManager:
             spoken = await homelab_tools.get_docker_status_spoken(container_name=c_name)
             raw = await homelab_tools.get_docker_status(container_name=c_name)
             return f"Résumé: {spoken}\nDétails: {json.dumps(raw, ensure_ascii=False)}"
+
+        if namespaced_name == "homelab_search_memory":
+            q = arguments.get("query", "")
+            matches = self.obsidian.search_memory(q)
+            spoken = self.obsidian.recall_memory_spoken(q)
+            return f"Résumé vocal: {spoken}\nRésultats: {json.dumps(matches, ensure_ascii=False)}"
+
+        if namespaced_name == "homelab_record_memory":
+            fact = arguments.get("fact", "")
+            cat = arguments.get("category")
+            res = self.obsidian.record_fact(category=cat, fact=fact)
+            return f"Fait enregistré avec succès dans la catégorie {res.get('category')} : {res.get('fact')}"
 
         # 2. External MCP server tools
         if namespaced_name not in self.tool_to_server:
