@@ -1,9 +1,9 @@
 site_name: SovereignDot Documentation
-site_url: https://mustroc.github.io/amazondot/
+site_url: https://devmustroc.github.io/amazondot/
 site_description: Sovereign, Offline-First AI Voice Assistant for Liberated Echo Dot 2G & Homelab Servers
 site_author: El Mustapha (Mustroc)
-repo_name: mustroc/amazondot
-repo_url: https://github.com/mustroc/amazondot
+repo_name: Devmustroc/amazondot
+repo_url: https://github.com/Devmustroc/amazondot
 edit_uri: edit/master/docs/
 
 theme:
