@@ -45,9 +45,15 @@ CATEGORY_RULES = {
 
 
 class ObsidianMemory:
-    def __init__(self, vault_path: str = "/home/devmust/Documents/obsidian"):
-        self.vault_path = Path(vault_path)
-        self.memory_dir = self.vault_path / "Memory"
+    def __init__(self, vault_path: Optional[str] = None):
+        env_vault = os.getenv("OBSIDIAN_VAULT_PATH")
+        default_vault = Path(__file__).resolve().parent.parent / "vault"
+        
+        self.vault_path = Path(vault_path or env_vault or default_vault)
+        if self.vault_path.name.lower() == "memory":
+            self.memory_dir = self.vault_path
+        else:
+            self.memory_dir = self.vault_path / "Memory"
         self._ensure_structure()
 
     def _ensure_structure(self):

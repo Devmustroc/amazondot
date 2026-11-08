@@ -140,10 +140,30 @@ class PiperEngine:
     def is_ready(self) -> bool:
         return self._is_ready and self._voice is not None
 
+    def _ensure_model_downloaded(self):
+        """Auto-downloads official French Piper model on first run if missing."""
+        import urllib.request
+        model_file = Path(self.model_path)
+        cfg_file = Path(self.config_path)
+        if model_file.exists() and cfg_file.exists():
+            return
+        logger.info("Piper neural voice missing. Auto-downloading from Hugging Face...")
+        model_file.parent.mkdir(parents=True, exist_ok=True)
+        base_url = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/fr/fr_FR/siwis/medium/"
+        try:
+            if not cfg_file.exists():
+                urllib.request.urlretrieve(base_url + "fr_FR-siwis-medium.onnx.json", str(cfg_file))
+            if not model_file.exists():
+                urllib.request.urlretrieve(base_url + "fr_FR-siwis-medium.onnx", str(model_file))
+            logger.info("Piper neural model downloaded successfully.")
+        except Exception as e:
+            logger.warning("Could not auto-download Piper model: %s", e)
+
     def initialize_sync(self):
         """Loads Piper ONNX model into memory and performs warmup."""
         if self._is_ready:
             return
+        self._ensure_model_downloaded()
         if not os.path.exists(self.model_path):
             logger.warning("Piper model file not found at %s. Offline TTS disabled.", self.model_path)
             return
