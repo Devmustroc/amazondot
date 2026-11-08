@@ -12,6 +12,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from core_server import homelab_tools
 from core_server.obsidian_memory import ObsidianMemory
+from core_server.resilience import global_circuit_breaker
 
 logger = logging.getLogger("mcp_client")
 
@@ -93,6 +94,17 @@ class McpManager:
                             }
                         },
                         "required": ["fact"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "homelab_get_resilience_status",
+                    "description": "Retourne l'état du Circuit-Breaker réseau et le statut du repli local Piper ONNX / Ollama.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {}
                     }
                 }
             }
@@ -216,6 +228,10 @@ class McpManager:
             cat = arguments.get("category")
             res = self.obsidian.record_fact(category=cat, fact=fact)
             return f"Fait enregistré avec succès dans la catégorie {res.get('category')} : {res.get('fact')}"
+
+        if namespaced_name == "homelab_get_resilience_status":
+            st = global_circuit_breaker.get_status()
+            return f"État du Circuit-Breaker: {st['state']}\nStatut: {json.dumps(st, ensure_ascii=False)}"
 
         # 2. External MCP server tools
         if namespaced_name not in self.tool_to_server:

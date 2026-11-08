@@ -41,6 +41,14 @@ WHISPER_BEAM_SIZE = int(os.getenv("WHISPER_BEAM_SIZE", "1")) # 1 = fast greedy d
 TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-VivienneMultilingualNeural")
 TTS_CACHE_ENABLED = os.getenv("TTS_CACHE_ENABLED", "true").lower() == "true"
 
+# Offline Resilience & Fallback (Piper ONNX)
+PIPER_ENABLED = os.getenv("PIPER_ENABLED", "true").lower() == "true"
+PIPER_MODEL_PATH = os.getenv("PIPER_MODEL_PATH", str(BASE_DIR / "core_server" / "models" / "piper" / "fr_FR-siwis-medium.onnx"))
+PIPER_CONFIG_PATH = os.getenv("PIPER_CONFIG_PATH", str(BASE_DIR / "core_server" / "models" / "piper" / "fr_FR-siwis-medium.onnx.json"))
+CIRCUIT_BREAKER_MAX_FAILURES = int(os.getenv("CIRCUIT_BREAKER_MAX_FAILURES", "2"))
+CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SEC = float(os.getenv("CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SEC", "15.0"))
+CIRCUIT_BREAKER_TTS_TIMEOUT_SEC = float(os.getenv("CIRCUIT_BREAKER_TTS_TIMEOUT_SEC", "1.2"))
+
 # Homelab & Proxmox SRE Configuration
 PROXMOX_HOST = os.getenv("PROXMOX_HOST", "192.168.1.200")
 PROXMOX_SSH_USER = os.getenv("PROXMOX_SSH_USER", "root")

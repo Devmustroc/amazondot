@@ -59,6 +59,7 @@ def process_audio_for_echo_dot(data: np.ndarray, sr: int) -> bytes:
 
 from core_server.obsidian_memory import ObsidianMemory
 from core_server.mcp_client import McpManager
+from core_server.resilience import global_circuit_breaker, global_piper_engine, CircuitState
 import requests
 
 COMMON_ACK_PHRASES = [
@@ -115,6 +116,10 @@ class Brain:
         self._tts_ram_cache: dict[str, bytes] = {}
         self._load_disk_cache()
 
+        # 7. Offline Resilience Circuit Breaker & Piper TTS
+        self.circuit_breaker = global_circuit_breaker
+        self.piper = global_piper_engine
+
         # In-memory conversation history
         self.history = []
 
@@ -137,11 +142,17 @@ class Brain:
             logger.info("Loaded %d common acknowledgment audio phrases into RAM cache.", loaded)
 
     async def initialize(self):
-        """Asynchronous initialization of external services (MCP, etc.)."""
+        """Asynchronous initialization of external services (MCP, Piper, etc.)."""
         try:
             await self.mcp.initialize()
         except Exception as e:
             logger.warning("Error initializing MCP manager: %s", e)
+
+        if config.PIPER_ENABLED:
+            try:
+                asyncio.create_task(self.piper.initialize_async())
+            except Exception as e:
+                logger.warning("Error starting background Piper initialization: %s", e)
 
     def transcribe(self, pcm_16k_bytes: bytes) -> str:
         """Transcribes 16kHz 16-bit mono PCM into French text using Whisper."""
@@ -303,6 +314,15 @@ class Brain:
             yield reply
             return
 
+        # 9. Instant Intent: État du Réseau & Résilience Hors-Ligne (Circuit Breaker)
+        if any(k in p_lower for k in ["état du réseau", "etat du reseau", "mode hors ligne", "statut de connexion", "circuit breaker", "santé réseau", "secours vocal"]):
+            st = self.circuit_breaker.get_status()
+            state_fr = "connecté au cloud" if st["state"] == "CLOSED" else "hors ligne avec repli local Piper ONNX" if st["state"] == "OPEN" else "en test de reconnexion cloud"
+            reply = f"Le circuit réseau est {st['state']}. Nous sommes {state_fr}. {st['total_fallbacks']} bascules de secours enregistrées."
+            logger.info("Instant Network Resilience Intent: '%s'", reply)
+            yield reply
+            return
+
         # Build dynamic system prompt with live date/time and query-relevant Obsidian knowledge
         now_str = now.strftime("%A %d %B %Y à %H:%M")
         obsidian_context = self.obsidian.get_relevant_context(prompt)
@@ -330,8 +350,8 @@ class Brain:
                     yield s
                 return
 
-        # B. Route to OpenRouter / Gemini 3.8 Flash with native streaming
-        if self.async_llm_client:
+        # B. Route to OpenRouter / Gemini 3.8 Flash with native streaming (if circuit is closed)
+        if self.async_llm_client and self.circuit_breaker.is_cloud_available():
             try:
                 logger.info("Routing to OpenRouter JEV / Gemini (%s)...", config.OPENROUTER_MODEL)
                 tools = self.mcp.get_openai_tools()
@@ -388,11 +408,13 @@ class Brain:
                     yield token_buffer.strip()
 
                 if full_reply.strip():
+                    self.circuit_breaker.record_success()
                     self.history.append({"role": "user", "content": prompt})
                     self.history.append({"role": "assistant", "content": full_reply.strip()})
                     return
             except Exception as e:
-                logger.error("OpenRouter streaming call failed, falling back: %s", e)
+                self.circuit_breaker.record_failure(e)
+                logger.error("OpenRouter streaming call failed, falling back to local Ollama: %s", e)
 
         # C. Fallback to Local Ollama
         loop = asyncio.get_running_loop()
@@ -423,10 +445,11 @@ class Brain:
 
     async def synthesize_speech(self, text: str) -> bytes:
         """
-        Synthesizes text to crystal-clear 48kHz 16-bit stereo WAV via Edge-TTS with multi-tier caching:
+        Synthesizes text to crystal-clear 48kHz 16-bit stereo WAV with multi-tier caching and Circuit-Breaker fallback:
         1. In-RAM cache (0.00ms).
         2. On-disk cache (<1ms).
-        3. Live Edge-TTS + acoustic filtering (process_audio_for_echo_dot).
+        3. Cloud Edge-TTS (with strict timeout).
+        4. Offline Piper ONNX instant fallback (<300ms) on network failure or circuit breaker OPEN.
         """
         text_clean = text.strip()
         if not text_clean:
@@ -448,37 +471,61 @@ class Brain:
             except Exception as e:
                 logger.warning("Error reading TTS disk cache: %s", e)
 
-        # Tier 3: Live Synthesis with 1 automatic retry
-        logger.info("Synthesizing speech via Edge-TTS (%s): '%s'", config.TTS_VOICE, text_clean)
-        for attempt in range(2):
+        # Tier 3: If Circuit Breaker is OPEN, directly bypass cloud and use offline Piper ONNX
+        if self.circuit_breaker.state == CircuitState.OPEN and config.PIPER_ENABLED:
+            logger.info("Circuit Breaker is OPEN. Synthesizing directly via offline Piper ONNX: '%s'", text_clean)
             try:
-                comm = edge_tts.Communicate(text_clean, config.TTS_VOICE)
-                mp3_stream = bytearray()
-                async for chunk in comm.stream():
-                    if chunk["type"] == "audio":
-                        mp3_stream.extend(chunk["data"])
-
-                if not mp3_stream:
-                    if attempt == 0:
-                        await asyncio.sleep(0.2)
-                        continue
-                    return b""
-
-                data, sr = sf.read(io.BytesIO(mp3_stream))
-                wav_data = process_audio_for_echo_dot(data, sr)
-
-                if config.TTS_CACHE_ENABLED:
+                wav_data = await self.piper.synthesize_async(text_clean)
+                if wav_data and config.TTS_CACHE_ENABLED:
                     self._tts_ram_cache[text_clean] = wav_data
                     try:
                         cache_file.write_bytes(wav_data)
                     except Exception:
                         pass
-
                 return wav_data
             except Exception as e:
-                if attempt == 0:
-                    await asyncio.sleep(0.2)
-                    continue
-                logger.error("Edge-TTS synthesis failed: %s", e)
+                logger.error("Offline Piper ONNX synthesis failed: %s", e)
                 return b""
-        return b""
+
+        # Tier 4: Attempt Cloud Edge-TTS with strict timeout and fallback
+        async def _call_edge_tts() -> bytes:
+            comm = edge_tts.Communicate(text_clean, config.TTS_VOICE)
+            mp3_stream = bytearray()
+            async for chunk in comm.stream():
+                if chunk["type"] == "audio":
+                    mp3_stream.extend(chunk["data"])
+            if not mp3_stream:
+                raise RuntimeError("Empty audio stream from Edge-TTS")
+            data, sr = sf.read(io.BytesIO(mp3_stream))
+            return process_audio_for_echo_dot(data, sr)
+
+        try:
+            logger.info("Synthesizing speech via Edge-TTS (%s): '%s'", config.TTS_VOICE, text_clean)
+            wav_data = await asyncio.wait_for(_call_edge_tts(), timeout=config.CIRCUIT_BREAKER_TTS_TIMEOUT_SEC)
+            self.circuit_breaker.record_success()
+
+            if config.TTS_CACHE_ENABLED:
+                self._tts_ram_cache[text_clean] = wav_data
+                try:
+                    cache_file.write_bytes(wav_data)
+                except Exception:
+                    pass
+            return wav_data
+
+        except Exception as e:
+            self.circuit_breaker.record_failure(e)
+            logger.warning("Edge-TTS timed out or failed (%s). Triggering instant Piper ONNX fallback (<300ms)...", e)
+            if config.PIPER_ENABLED:
+                try:
+                    wav_data = await self.piper.synthesize_async(text_clean)
+                    if wav_data and config.TTS_CACHE_ENABLED:
+                        self._tts_ram_cache[text_clean] = wav_data
+                        try:
+                            cache_file.write_bytes(wav_data)
+                        except Exception:
+                            pass
+                    return wav_data
+                except Exception as e_pip:
+                    logger.error("Piper fallback synthesis failed: %s", e_pip)
+                    return b""
+            return b""
