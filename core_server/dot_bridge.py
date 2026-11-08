@@ -106,6 +106,12 @@ class DotBridge:
         logger.info("LED %s brightness=%d", pattern, brightness)
         await self._send_cmd(f"LED {pattern} {brightness}\n".encode())
 
+    async def stop_audio(self):
+        """Stops ongoing playback immediately and mutes amplifier."""
+        resp = await self._send_cmd(b"STOP\n")
+        self._play_done.set()
+        logger.info("STOP playback requested → %s", resp)
+
     async def play_audio(self, wav_bytes: bytes):
         """Streams WAV bytes to tad_dotd and waits for EVT PLAY_DONE."""
         if not wav_bytes:

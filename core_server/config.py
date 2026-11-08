@@ -26,7 +26,7 @@ CENTER_MIC_OFFSET = 18       # Channel 6 in S24_3LE starts at byte 18
 
 # Processing & VAD
 VAD_SILENCE_THRESHOLD = float(os.getenv("VAD_SILENCE_THRESHOLD", "12.0")) # RMS
-VAD_SILENCE_DURATION_SEC = float(os.getenv("VAD_SILENCE_DURATION_SEC", "1.2"))
+VAD_SILENCE_DURATION_SEC = float(os.getenv("VAD_SILENCE_DURATION_SEC", "0.6")) # Fast 600ms silence detection
 MAX_RECORDING_SEC = int(os.getenv("MAX_RECORDING_SEC", "10"))
 
 # Assistant Identity & Wake Word
@@ -37,7 +37,9 @@ WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
 
 # Speech-to-Text & Text-to-Speech
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")
+WHISPER_BEAM_SIZE = int(os.getenv("WHISPER_BEAM_SIZE", "1")) # 1 = fast greedy decoding
 TTS_VOICE = os.getenv("TTS_VOICE", "fr-FR-VivienneMultilingualNeural")
+TTS_CACHE_ENABLED = os.getenv("TTS_CACHE_ENABLED", "true").lower() == "true"
 
 # LLM & Brain (OpenRouter)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
