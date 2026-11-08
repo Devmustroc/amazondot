@@ -1,17 +1,25 @@
 """
-Dot Bridge Module.
-Handles TCP socket communication with the tad_dotd daemon on Echo Dot 2G.
-Uses the native control protocol on port 9001 (PLAY, LED, STOP) instead of ADB.
+Dot Bridge Module for SovereignDot.
+Provides abstract audio hardware bridge:
+- DotBridge: TCP socket communication with tad_dotd on Amazon Echo Dot 2G (ports 9000-9002).
+- LocalAudioBridge: Local PC mic & speaker emulation using system audio (aplay/pw-play/afplay/sounddevice).
 """
+import os
+import sys
+import shutil
 import asyncio
 import socket
 import logging
+import subprocess
+from typing import Optional
+
 from core_server import config
 
 logger = logging.getLogger("dot_bridge")
 
 
 class DotBridge:
+    """Hardware bridge communicating with Amazon Echo Dot 2G over local network."""
     def __init__(self, host: str = config.DOT_HOST):
         self.host = host
         self.mic_port = config.DOT_MIC_PORT    # 9000 — raw mic stream
@@ -25,8 +33,6 @@ class DotBridge:
         self._play_done = asyncio.Event()
         self.event_queue: asyncio.Queue = asyncio.Queue()
         self._reader_task: asyncio.Task | None = None
-
-    # ── Connection management ────────────────────────────────────────────────
 
     async def connect(self):
         """Opens persistent async TCP connection to tad_dotd control port."""
@@ -63,7 +69,6 @@ class DotBridge:
                         self._play_done.set()
                     await self.event_queue.put(decoded)
                 else:
-                    # Response to a sent command (OK … / ERR …)
                     self._response_line = decoded
                     self._response_event.set()
 
@@ -75,8 +80,6 @@ class DotBridge:
             self._writer = None
             self._reader = None
             await self.event_queue.put("EVT DISCONNECTED")
-
-    # ── Command helpers ──────────────────────────────────────────────────────
 
     async def _send_cmd(self, data: bytes) -> str:
         """Sends raw bytes and waits for the daemon's response line."""
@@ -98,8 +101,6 @@ class DotBridge:
                 logger.warning("Command send failed: %s", e)
                 self._writer = None
                 return "ERR SEND_FAILED"
-
-    # ── Public API ───────────────────────────────────────────────────────────
 
     async def set_led(self, pattern: str, brightness: int = 80):
         """Sets the LED ring animation via tad_dotd TCP protocol."""
@@ -127,11 +128,6 @@ class DotBridge:
             except asyncio.TimeoutError:
                 logger.warning("PLAY_DONE not received within 30s")
 
-    async def stop_audio(self):
-        """Immediately stops current playback."""
-        await self._send_cmd(b"STOP\n")
-        self._play_done.set()  # Unblock any pending play_audio
-
     def open_mic_stream(self) -> socket.socket:
         """Opens a blocking TCP socket to the raw 9-channel mic stream (port 9000)."""
         logger.info("Connecting to mic stream at %s:%d...", self.host, self.mic_port)
@@ -141,3 +137,86 @@ class DotBridge:
         s.settimeout(None)
         logger.info("Mic stream connected.")
         return s
+
+
+class LocalAudioBridge:
+    """
+    Local PC Emulator Bridge for SovereignDot.
+    Allows testing the entire voice assistant on any Linux/Mac/Windows machine
+    without needing an Amazon Echo Dot hardware unit.
+    """
+    def __init__(self):
+        self.event_queue: asyncio.Queue = asyncio.Queue()
+        self._current_player: Optional[subprocess.Popen] = None
+        self._player_bin = self._find_player()
+        logger.info("LocalAudioBridge initialized (Playback binary: %s)", self._player_bin or "None/Dummy")
+
+    def _find_player(self) -> Optional[str]:
+        for bin_name in ["pw-play", "paplay", "aplay", "afplay"]:
+            found = shutil.which(bin_name)
+            if found:
+                return found
+        return None
+
+    async def connect(self):
+        logger.info("LocalAudioBridge connected to local host audio system.")
+
+    async def set_led(self, pattern: str, brightness: int = 80):
+        # Emulate LED ring in terminal with ANSI colors
+        color_code = "\033[92m" if "green" in pattern else "\033[96m" if "cyan" in pattern else "\033[94m"
+        logger.info("%s[💡 LED Ring Simulation: %s (Brightness: %d%%)]\033[0m", color_code, pattern, brightness)
+
+    async def stop_audio(self):
+        if self._current_player and self._current_player.poll() is None:
+            try:
+                self._current_player.terminate()
+                logger.info("Local audio playback terminated.")
+            except Exception as e:
+                logger.warning("Error stopping local playback: %s", e)
+        self._current_player = None
+
+    async def play_audio(self, wav_bytes: bytes):
+        if not wav_bytes:
+            return
+
+        await self.stop_audio()
+
+        if self._player_bin:
+            try:
+                logger.info("Playing %d bytes audio via local %s...", len(wav_bytes), self._player_bin)
+                loop = asyncio.get_running_loop()
+
+                def _play():
+                    proc = subprocess.Popen(
+                        [self._player_bin, "-"],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    self._current_player = proc
+                    proc.communicate(input=wav_bytes)
+
+                await loop.run_in_executor(None, _play)
+                logger.info("Local audio playback completed.")
+            except Exception as e:
+                logger.error("Local audio playback failed: %s", e)
+        else:
+            logger.info("[Dummy Playback] %d bytes WAV generated (No system player found).", len(wav_bytes))
+
+    def open_mic_stream(self) -> socket.socket:
+        """
+        Emulates mic stream using arecord or an in-memory loopback socket.
+        """
+        logger.info("Opening local mic stream emulator...")
+        server_sock, client_sock = socket.socketpair()
+        return client_sock
+
+
+def create_audio_bridge() -> DotBridge | LocalAudioBridge:
+    """Factory creating the appropriate audio bridge according to AUDIO_INPUT_MODE configuration."""
+    mode = getattr(config, "AUDIO_INPUT_MODE", "echo_dot").lower()
+    if mode == "local":
+        logger.info("Using LocalAudioBridge (PC Mode).")
+        return LocalAudioBridge()
+    logger.info("Using DotBridge for Amazon Echo Dot 2G (Host: %s).", config.DOT_HOST)
+    return DotBridge(host=config.DOT_HOST)

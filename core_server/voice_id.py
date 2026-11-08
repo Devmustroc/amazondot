@@ -313,10 +313,13 @@ class VoiceIDEngine:
             self._seed_default_family_profiles()
 
     def _seed_default_family_profiles(self):
-        """Seeds baseline profiles for El Mustapha (Admin) and Ismail (Child)."""
+        """Seeds baseline profiles for Family Admin and Child."""
+        admin_name = getattr(config, "FAMILY_ADMIN_NAME", "El Mustapha")
+        child_name = getattr(config, "FAMILY_CHILD_NAME", "Ismail")
+
         # Baseline adult profile (F0 ~120Hz)
-        mustapha = SpeakerProfile(
-            name="El Mustapha",
+        admin_prof = SpeakerProfile(
+            name=admin_name,
             role=UserRole.ADMIN,
             f0_mean_hz=122.0,
             spectral_centroid_hz=1450.0,
@@ -325,8 +328,8 @@ class VoiceIDEngine:
             is_protected_child=False,
         )
         # Baseline child profile (F0 ~310Hz)
-        ismail = SpeakerProfile(
-            name="Ismail",
+        child_prof = SpeakerProfile(
+            name=child_name,
             role=UserRole.CHILD,
             f0_mean_hz=315.0,
             spectral_centroid_hz=2800.0,
@@ -335,11 +338,11 @@ class VoiceIDEngine:
             is_protected_child=True,
         )
         self._profiles = {
-            "el mustapha": mustapha,
-            "ismail": ismail,
+            admin_name.lower(): admin_prof,
+            child_name.lower(): child_prof,
         }
         self.save_profiles()
-        logger.info("Seeded default family voice profiles: El Mustapha (Admin), Ismail (Child).")
+        logger.info("Seeded default family voice profiles: %s (Admin), %s (Child).", admin_name, child_name)
 
     def get_profiles_summary(self) -> List[Dict[str, Any]]:
         return [p.to_dict() for p in self._profiles.values()]

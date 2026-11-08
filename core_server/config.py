@@ -29,9 +29,12 @@ VAD_SILENCE_THRESHOLD = float(os.getenv("VAD_SILENCE_THRESHOLD", "12.0")) # RMS
 VAD_SILENCE_DURATION_SEC = float(os.getenv("VAD_SILENCE_DURATION_SEC", "0.6")) # Fast 600ms silence detection
 MAX_RECORDING_SEC = int(os.getenv("MAX_RECORDING_SEC", "10"))
 
-# Assistant Identity & Wake Word
-ASSISTANT_NAME = "Régis"
-WAKE_WORDS = ["régis", "regis", "regisse", "alexa"]
+# Assistant Identity & Family RBAC Configuration
+ASSISTANT_NAME = os.getenv("ASSISTANT_NAME", "Régis")
+FAMILY_ADMIN_NAME = os.getenv("FAMILY_ADMIN_NAME", "El Mustapha")
+FAMILY_CHILD_NAME = os.getenv("FAMILY_CHILD_NAME", "Ismail")
+AUDIO_INPUT_MODE = os.getenv("AUDIO_INPUT_MODE", "echo_dot") # "echo_dot" or "local"
+WAKE_WORDS = [w.strip().lower() for w in os.getenv("WAKE_WORDS", "régis,regis,regisse,alexa").split(",")]
 WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "alexa") # openWakeWord model for fast fallback
 WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))
 
@@ -60,9 +63,10 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-3.8-flash")
 OPENROUTER_TTS_MODEL = os.getenv("OPENROUTER_TTS_MODEL", "google/gemini-3.8-flash-lite-tts")
 OPENROUTER_TTS_VOICE = os.getenv("OPENROUTER_TTS_VOICE", "Puck")
 
-# System Prompt for TAD
-SYSTEM_PROMPT = """Tu t'appelles Régis. Tu es l'assistant vocal intelligent, chaleureux et concis pour la famille de El Mustapha.
+# System Prompt for SovereignDot
+DEFAULT_SYSTEM_PROMPT = f"""Tu t'appelles {ASSISTANT_NAME}. Tu es l'assistant vocal intelligent, souverain, chaleureux et concis pour la maison.
 Réponds toujours en français métropolitain standard (de France), sans aucun accent régional ni expression québécoise, de façon calme, douce, précise et brève (1 à 2 phrases maximum), car tes réponses sont prononcées à voix haute."""
+SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT)
 # Continuous Conversation (Follow-up Mode)
 FOLLOWUP_TIMEOUT_SEC = float(os.getenv("FOLLOWUP_TIMEOUT_SEC", "10.0"))
 CLOSING_WORDS = ["merci", "c'est bon", "stop", "au revoir", "bonne journée", "bonne nuit", "à plus", "rien", "c'est tout", "non c'est bon"]

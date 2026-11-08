@@ -230,7 +230,8 @@ class Brain:
         if speaker_audio:
             speaker, conf = self.voice_id.identify_speaker(speaker_audio)
         else:
-            speaker = SpeakerProfile(name="El Mustapha", role=UserRole.ADMIN, f0_mean_hz=122.0, spectral_centroid_hz=1450.0)
+            admin_name = getattr(config, "FAMILY_ADMIN_NAME", "Admin")
+            speaker = SpeakerProfile(name=admin_name, role=UserRole.ADMIN, f0_mean_hz=122.0, spectral_centroid_hz=1450.0)
             conf = 1.0
 
         # Enforce RBAC security on prompt

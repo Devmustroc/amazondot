@@ -11,7 +11,7 @@ import numpy as np
 from core_server import config
 from core_server.audio_processor import AudioProcessor
 from core_server.brain import Brain
-from core_server.dot_bridge import DotBridge
+from core_server.dot_bridge import DotBridge, create_audio_bridge
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,8 +23,8 @@ logger = logging.getLogger("tad_core")
 
 class TadAssistant:
     def __init__(self):
-        logger.info("Initializing TAD Assistant...")
-        self.bridge = DotBridge(host=config.DOT_HOST)
+        logger.info("Initializing SovereignDot Assistant (Mode: %s)...", config.AUDIO_INPUT_MODE)
+        self.bridge = create_audio_bridge()
         self.processor = AudioProcessor(wake_model_name=config.WAKE_WORD_MODEL)
         self.brain = Brain()
         self.running = False
