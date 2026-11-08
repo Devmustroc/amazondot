@@ -1,0 +1,25 @@
+[Unit]
+Description=TAD Core — Sovereign Amazon Echo Dot Voice Assistant (Native Systemd Daemon)
+Documentation=https://github.com/mustroc/amazondot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tad
+EnvironmentFile=/opt/tad/.env
+ExecStart=/opt/tad/.venv/bin/python3 -m core_server.main
+Restart=always
+RestartSec=3s
+
+# Journald logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tad-native
+
+# Hardening
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

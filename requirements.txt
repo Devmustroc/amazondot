@@ -1,0 +1,15 @@
+# TAD Core — Production Dependencies
+numpy>=2.0.0
+scipy>=1.14.0
+soundfile>=0.12.0
+faster-whisper>=1.0.0
+openwakeword>=0.4.0
+edge-tts>=7.0.0
+piper-tts>=1.8.0
+onnxruntime>=1.18.0
+openai>=1.20.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+cryptography>=42.0.0
+mcp>=1.0.0
+pydantic>=2.0.0

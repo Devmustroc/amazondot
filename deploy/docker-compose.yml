@@ -1,0 +1,43 @@
+# ==============================================================================
+# TAD Core — Docker Compose Configuration for Production (Proxmox CT 105)
+# ==============================================================================
+
+services:
+  tad-core:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: tad-core:latest
+    container_name: tad-core
+    restart: unless-stopped
+    # Host networking enables direct sub-millisecond TCP/UDP communication
+    # with the Amazon Echo Dot (192.168.1.23) and local Ollama instance (127.0.0.1:11434)
+    network_mode: host
+    env_file:
+      - ../.env
+    volumes:
+      # Persistent voice profiles and biometric encrypted vault
+      - tad_data:/app/core_server/data
+      # Audio TTS multi-tier cache
+      - tad_cache:/app/core_server/tts_cache
+      # Read-only SSH keys for Proxmox Homelab SRE monitoring
+      - /root/.ssh:/root/.ssh:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+volumes:
+  tad_data:
+    name: tad_data
+  tad_cache:
+    name: tad_cache

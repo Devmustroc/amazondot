@@ -1,0 +1,28 @@
+[Unit]
+Description=TAD Core — Sovereign Amazon Echo Dot Voice Assistant (Docker Service)
+Documentation=https://github.com/mustroc/amazondot
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tad/deploy
+ExecStartPre=-/usr/bin/docker compose down
+ExecStart=/usr/bin/docker compose up
+ExecStop=/usr/bin/docker compose down
+Restart=always
+RestartSec=5s
+TimeoutStartSec=120
+TimeoutStopSec=20
+
+# Standardized journald logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tad-core
+
+# Resource Hardening
+LimitNOFILE=65535
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
