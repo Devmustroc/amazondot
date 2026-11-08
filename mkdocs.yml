@@ -1,0 +1,81 @@
+site_name: SovereignDot Documentation
+site_url: https://mustroc.github.io/amazondot/
+site_description: Sovereign, Offline-First AI Voice Assistant for Liberated Echo Dot 2G & Homelab Servers
+site_author: El Mustapha (Mustroc)
+repo_name: mustroc/amazondot
+repo_url: https://github.com/mustroc/amazondot
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  language: fr
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    # Scheme toggle: Dark Mode (Default)
+    - scheme: slate
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+    # Scheme toggle: Light Mode
+    - scheme: default
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang:
+        - fr
+        - en
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Accueil: index.md
+  - Guide de Démarrage:
+      - Démarrage Rapide (60s): getting-started/quickstart.md
+      - Configuration (.env): getting-started/configuration.md
+  - Architecture & Ingénierie:
+      - Pipeline Vocal Streaming (<1000ms): architecture/pipeline.md
+      - Résilience & Circuit-Breaker: architecture/circuit-breaker.md
+      - Biométrie VoiceID & RBAC Enfant: architecture/voiceid-rbac.md
+      - Mémoire Atomique Obsidian: architecture/obsidian-memory.md
+      - Supervision Homelab & SRE Proxmox: architecture/homelab-sre.md
+  - Libération Hardware:
+      - Echo Dot 2G Jailbreak: hardware/echo-dot-2g.md
+  - Contribution & Skills:
+      - Créer une Intention (@intent): contributing/writing-intents.md
+      - Spécification Clean Code: specs/SPEC_CLEAN_CODE_AND_DOCS.md

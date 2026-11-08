@@ -20,3 +20,4 @@ vault/
 *.log
 *.mp3
 tools/framework.jar
+site/

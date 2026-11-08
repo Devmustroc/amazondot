@@ -10,10 +10,11 @@
 [![Latency](https://img.shields.io/badge/Voice_Latency-%3C1000ms-success.svg)](#performance)
 [![Offline TTS](https://img.shields.io/badge/Offline_TTS-Piper_ONNX-orange.svg)](#offline-resilience)
 [![Biometric RBAC](https://img.shields.io/badge/VoiceID-Child_Safe_RBAC-blueviolet.svg)](#voiceid--child-safety)
+[![Docs: Material](https://img.shields.io/badge/Docs-MkDocs_Material-blue.svg)](https://mustroc.github.io/amazondot/)
 
 *Zero AWS dependencies. Zero tracking. 100% Local Homelab & Sovereign AI.*
 
-[English](#english) • [Français](#français) • [Quickstart](#-quickstart-in-60-seconds) • [Architecture](#-architecture) • [Echo Dot Jailbreak](#-hardware-liberation-echo-dot-2g)
+[📖 Documentation](https://mustroc.github.io/amazondot/) • [English](#english) • [Français](#français) • [Quickstart](#-quickstart-in-60-seconds) • [Architecture](#-architecture) • [Echo Dot Jailbreak](#-hardware-liberation-echo-dot-2g)
 
 </div>
 
@@ -125,7 +126,7 @@ SovereignDot uses a **Clean-Room approach**. No proprietary Amazon firmware file
    ```bash
    ./tools/fetch_blobs.sh
    ```
-3. Follow our detailed hardware flashing guide in [`docs/HARDWARE_JAILBREAK.md`](docs/HARDWARE_JAILBREAK.md).
+3. Follow our detailed hardware flashing guide in [`docs/hardware/echo-dot-2g.md`](docs/hardware/echo-dot-2g.md).
 
 ---
 
