@@ -274,6 +274,63 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         res_scout = [r async for r in gen_scout]
         self.assertIn("Veille concurrentielle terminée", res_scout[0])
 
+    async def test_sprint_4_living_room_and_second_brain_intents(self):
+        """Verify Cinema Mode, Immich Memories, Podcast Briefing, and Obsidian Daily intents."""
+        # 1. Cinema Media
+        cin_ctx = IntentContext(
+            prompt="Régis, lance le mode cinéma avec un dessin animé pour Ismail",
+            clean_prompt="lance le mode cinéma avec un dessin animé pour ismail",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_cin = await self.registry.handle_prompt(cin_ctx)
+        self.assertIsNotNone(gen_cin)
+        res_cin = [r async for r in gen_cin]
+        self.assertIn("Mode Cinéma activé", res_cin[0])
+        self.assertIn("Samsung 65", res_cin[0])
+
+        # 2. Immich Photos
+        imm_ctx = IntentContext(
+            prompt="Régis, montre-moi les photos d'Ismail dans le salon",
+            clean_prompt="montre-moi les photos d'ismail dans le salon",
+            speaker=self.child,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_imm = await self.registry.handle_prompt(imm_ctx)
+        self.assertIsNotNone(gen_imm)
+        res_imm = [r async for r in gen_imm]
+        self.assertIn("photos et souvenirs", res_imm[0])
+        self.assertIn("Immich", res_imm[0])
+
+        # 3. Podcast Briefing 21h45
+        pod_ctx = IntentContext(
+            prompt="Régis, génère mon podcast audio pour le transport de 21h45",
+            clean_prompt="génère mon podcast audio pour le transport de 21h45",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_pod = await self.registry.handle_prompt(pod_ctx)
+        self.assertIsNotNone(gen_pod)
+        res_pod = [r async for r in gen_pod]
+        self.assertIn("podcast exécutif de 3 minutes", res_pod[0])
+
+        # 4. Obsidian Daily Graph
+        obs_ctx = IntentContext(
+            prompt="Régis, fais la consolidation de mon journal du jour dans mon second cerveau",
+            clean_prompt="fais la consolidation de mon journal du jour dans mon second cerveau",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_obs = await self.registry.handle_prompt(obs_ctx)
+        self.assertIsNotNone(gen_obs)
+        res_obs = [r async for r in gen_obs]
+        self.assertIn("journal de bord Obsidian", res_obs[0])
+        self.assertIn("Second Cerveau", res_obs[0])
+
 
 if __name__ == "__main__":
     unittest.main()

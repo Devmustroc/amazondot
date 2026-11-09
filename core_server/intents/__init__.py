@@ -18,6 +18,10 @@ from core_server.intents import ceo_cockpit
 from core_server.intents import voice_to_pr
 from core_server.intents import ci_watchdog
 from core_server.intents import saas_scout
+from core_server.intents import cinema
+from core_server.intents import immich_photos
+from core_server.intents import podcast_briefing
+from core_server.intents import obsidian_daily
 from core_server.intents import resilience
 
 # Reload registry once all modules are loaded
