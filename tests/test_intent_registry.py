@@ -218,6 +218,62 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         res = [r async for r in gen]
         self.assertIn("je m'arrête", res[0])
 
+    async def test_sprint_3_ceo_and_lead_dev_intents(self):
+        """Verify CEO Cockpit, Voice-to-PR, CI Watchdog, and SaaS Scout intents."""
+        # 1. CEO Cockpit
+        ceo_ctx = IntentContext(
+            prompt="Régis, fais-moi le point CEO pour les 9400 euros MRR",
+            clean_prompt="fais-moi le point ceo pour les 9400 euros mrr",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_ceo = await self.registry.handle_prompt(ceo_ctx)
+        self.assertIsNotNone(gen_ceo)
+        res_ceo = [r async for r in gen_ceo]
+        self.assertIn("C E O", res_ceo[0])
+        self.assertIn("Mamitales", res_ceo[0])
+
+        # 2. Voice-to-PR
+        pr_ctx = IntentContext(
+            prompt="Régis, ouvre une branche pour corriger le bug de login",
+            clean_prompt="ouvre une branche pour corriger le bug de login",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_pr = await self.registry.handle_prompt(pr_ctx)
+        self.assertIsNotNone(gen_pr)
+        res_pr = [r async for r in gen_pr]
+        self.assertIn("feat/voice-", res_pr[0])
+        self.assertIn("Telegram", res_pr[0])
+
+        # 3. CI Watchdog
+        ci_ctx = IntentContext(
+            prompt="Régis, quel est l'état du watchdog CI ?",
+            clean_prompt="quel est l'état du watchdog ci",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_ci = await self.registry.handle_prompt(ci_ctx)
+        self.assertIsNotNone(gen_ci)
+        res_ci = [r async for r in gen_ci]
+        self.assertIn("watchdog C I C D", res_ci[0])
+
+        # 4. SaaS Scout
+        scout_ctx = IntentContext(
+            prompt="Régis, lance la veille concurrentielle et idées SaaS",
+            clean_prompt="lance la veille concurrentielle et idées saas",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_scout = await self.registry.handle_prompt(scout_ctx)
+        self.assertIsNotNone(gen_scout)
+        res_scout = [r async for r in gen_scout]
+        self.assertIn("Veille concurrentielle terminée", res_scout[0])
+
 
 if __name__ == "__main__":
     unittest.main()

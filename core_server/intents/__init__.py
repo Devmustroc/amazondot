@@ -14,6 +14,10 @@ from core_server.intents import paperless
 from core_server.intents import mamitales
 from core_server.intents import shift_guard
 from core_server.intents import stop
+from core_server.intents import ceo_cockpit
+from core_server.intents import voice_to_pr
+from core_server.intents import ci_watchdog
+from core_server.intents import saas_scout
 from core_server.intents import resilience
 
 # Reload registry once all modules are loaded
