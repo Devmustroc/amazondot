@@ -114,6 +114,49 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Désolé Ismail", res_child[0])
         self.assertIn("réservé aux adultes", res_child[0])
 
+    async def test_paperless_caf_and_tax_and_demo_intents(self):
+        """Verify CAF prime d'activité, tax optimizer, and demo mode answers."""
+        # 1. CAF
+        caf_ctx = IntentContext(
+            prompt="Régis, calcule ma prime d'activité CAF pour le trimestre",
+            clean_prompt="calcule ma prime d'activité caf pour le trimestre",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_caf = await self.registry.handle_prompt(caf_ctx)
+        self.assertIsNotNone(gen_caf)
+        res_caf = [r async for r in gen_caf]
+        self.assertIn("C A F", res_caf[0])
+        self.assertIn("net social", res_caf[0])
+
+        # 2. Tax Optimizer
+        tax_ctx = IntentContext(
+            prompt="Régis, lance l'optimisation fiscale de mes impôts",
+            clean_prompt="lance l'optimisation fiscale de mes impôts",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_tax = await self.registry.handle_prompt(tax_ctx)
+        self.assertIsNotNone(gen_tax)
+        res_tax = [r async for r in gen_tax]
+        self.assertIn("frais réels", res_tax[0])
+
+        # 3. Demo Mode
+        demo_ctx = IntentContext(
+            prompt="Régis, passe en mode démo pour la vidéo",
+            clean_prompt="passe en mode démo pour la vidéo",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_demo = await self.registry.handle_prompt(demo_ctx)
+        self.assertIsNotNone(gen_demo)
+        res_demo = [r async for r in gen_demo]
+        self.assertIn("Mode Démo activé", res_demo[0])
+        self.assertIn("Régis", res_demo[0])
+
 
 if __name__ == "__main__":
     unittest.main()

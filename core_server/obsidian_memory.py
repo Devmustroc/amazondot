@@ -1,6 +1,6 @@
 """
 TAD Obsidian Memory Module.
-Connects Regis directly to the local Obsidian Vault (/home/devmust/Documents/obsidian).
+Connects Regis directly to the local Obsidian Vault (./vault/Memory).
 Maintains persistent family memory, preferences, and Homelab knowledge in structured Markdown.
 Provides semantic keyword search and dynamic prompt context retrieval.
 """
