@@ -157,6 +157,53 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Mode Démo activé", res_demo[0])
         self.assertIn("Régis", res_demo[0])
 
+    async def test_mamitales_child_story_intent(self):
+        """Verify Ismail (CHILD) voice prompt triggers Mamitales story routing."""
+        child_ctx = IntentContext(
+            prompt="Régis, raconte-moi une histoire de robot",
+            clean_prompt="raconte-moi une histoire de robot",
+            speaker=self.child,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen = await self.registry.handle_prompt(child_ctx)
+        self.assertIsNotNone(gen)
+        res = [r async for r in gen]
+        self.assertTrue(len(res) >= 2)
+        self.assertIn("Coucou Ismail", res[0])
+        self.assertIn("Mamitales", res[0])
+        self.assertTrue("Ismail" in res[1] or "robot" in res[1].lower())
+
+    async def test_shift_aware_night_routine_intent(self):
+        """Verify night shift routine: departure at 21h30, sleep mode at 07h20, and watchdog."""
+        # Departure
+        dep_ctx = IntentContext(
+            prompt="Régis, je pars au travail à l'hôtel",
+            clean_prompt="je pars au travail à l'hôtel",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_dep = await self.registry.handle_prompt(dep_ctx)
+        self.assertIsNotNone(gen_dep)
+        res_dep = [r async for r in gen_dep]
+        self.assertIn("Bonne garde", res_dep[0])
+        self.assertIn("Ilévia", res_dep[0])
+
+        # Return & Sleep
+        ret_ctx = IntentContext(
+            prompt="Régis, je rentre du travail, je vais dormir",
+            clean_prompt="je rentre du travail je vais dormir",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_ret = await self.registry.handle_prompt(ret_ctx)
+        self.assertIsNotNone(gen_ret)
+        res_ret = [r async for r in gen_ret]
+        self.assertIn("Bon retour", res_ret[0])
+        self.assertIn("mode silence réparateur", res_ret[0])
+
 
 if __name__ == "__main__":
     unittest.main()
