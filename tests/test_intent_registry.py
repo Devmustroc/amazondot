@@ -204,6 +204,20 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Bon retour", res_ret[0])
         self.assertIn("mode silence réparateur", res_ret[0])
 
+    async def test_stop_playback_intent(self):
+        """Verify instantaneous stop intent (priority=1)."""
+        stop_ctx = IntentContext(
+            prompt="Régis, stop !",
+            clean_prompt="stop",
+            speaker=self.child,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen = await self.registry.handle_prompt(stop_ctx)
+        self.assertIsNotNone(gen)
+        res = [r async for r in gen]
+        self.assertIn("je m'arrête", res[0])
+
 
 if __name__ == "__main__":
     unittest.main()
