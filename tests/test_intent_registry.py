@@ -26,6 +26,7 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         self.assertIn("memory_recall", intent_names)
         self.assertIn("proxmox_status", intent_names)
         self.assertIn("docker_status", intent_names)
+        self.assertIn("paperless_legal_advisor", intent_names)
         self.assertIn("network_resilience", intent_names)
 
     async def test_time_intent_execution(self):
@@ -84,6 +85,34 @@ class TestIntentRegistrySubsystem(unittest.IsolatedAsyncioTestCase):
         res = [r async for r in gen]
         self.assertIn("Désolé Ismail", res[0])
         self.assertIn("réservé aux adultes", res[0])
+
+    async def test_paperless_legal_advisor_intent(self):
+        """Verify PaperlessLegalAdvisorIntent answers contract queries for admin and blocks child."""
+        admin_ctx = IntentContext(
+            prompt="Régis, quel est mon préavis dans mon contrat de travail ?",
+            clean_prompt="quel est mon préavis dans mon contrat de travail",
+            speaker=self.admin,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen = await self.registry.handle_prompt(admin_ctx)
+        self.assertIsNotNone(gen)
+        res = [r async for r in gen]
+        self.assertIn("préavis est d'un mois", res[0])
+        self.assertIn("Telegram", res[0])
+
+        child_ctx = IntentContext(
+            prompt="Régis, montre-moi les fiches de paie dans Paperless",
+            clean_prompt="montre-moi les fiches de paie dans paperless",
+            speaker=self.child,
+            obsidian=None,
+            circuit_breaker=None,
+        )
+        gen_child = await self.registry.handle_prompt(child_ctx)
+        self.assertIsNotNone(gen_child)
+        res_child = [r async for r in gen_child]
+        self.assertIn("Désolé Ismail", res_child[0])
+        self.assertIn("réservé aux adultes", res_child[0])
 
 
 if __name__ == "__main__":
