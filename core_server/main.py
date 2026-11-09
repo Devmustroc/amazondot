@@ -7,11 +7,12 @@ import re
 import time
 import asyncio
 import logging
+from typing import Optional
 import numpy as np
 from core_server import config
 from core_server.audio_processor import AudioProcessor
 from core_server.brain import Brain
-from core_server.dot_bridge import DotBridge, create_audio_bridge
+from core_server.dot_bridge import DotBridge, LocalAudioBridge, create_audio_bridge
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,12 +33,15 @@ class TadAssistant:
 
     async def run(self):
         self.running = True
-        logger.info("Starting TAD Assistant connecting to Echo Dot at %s...", config.DOT_HOST)
-
         await self.brain.initialize()
         await self.bridge.connect()
         await self.bridge.set_led("solid_green", brightness=50)
 
+        if isinstance(self.bridge, LocalAudioBridge):
+            await self.run_local_emulator_loop()
+            return
+
+        logger.info("Starting TAD Assistant connecting to Echo Dot at %s...", config.DOT_HOST)
         while self.running:
             try:
                 mic_socket = self.bridge.open_mic_stream()
@@ -46,6 +50,45 @@ class TadAssistant:
             except Exception as e:
                 logger.error("Mic stream error: %s. Reconnecting in 3s...", e)
                 await asyncio.sleep(3)
+
+    async def run_local_emulator_loop(self):
+        """Interactive PC Emulator mode: supports both live PC microphone recording and keyboard text input."""
+        loop = asyncio.get_running_loop()
+        logger.info("==================================================================")
+        logger.info("💻 SovereignDot PC Emulator Mode Active!")
+        logger.info("👉 Type a voice prompt and press Enter, OR press Enter empty to record 4s from your PC microphone ('q' to quit).")
+        logger.info("==================================================================")
+
+        while self.running:
+            try:
+                user_input = await loop.run_in_executor(
+                    None, lambda: input("\n🎙️ [SovereignDot PC] Prompt (or Enter for Mic) > ").strip()
+                )
+            except EOFError:
+                break
+
+            if user_input.lower() in ("q", "quit", "exit"):
+                logger.info("Exiting PC Emulator mode.")
+                break
+
+            speaker_pcm = None
+            if not user_input:
+                await self.bridge.set_led("solid_blue", brightness=85)
+                pcm_bytes = await self.bridge.record_local_mic(duration_sec=4.0)
+                if not pcm_bytes:
+                    logger.warning("No audio captured from microphone. Please type your prompt directly.")
+                    continue
+                speaker_pcm = pcm_bytes
+                user_input = self.brain.transcribe(pcm_bytes).strip()
+                if not user_input:
+                    logger.info("No speech detected in microphone recording.")
+                    await self.bridge.set_led("solid_green", brightness=50)
+                    continue
+                logger.info("🗣️ Transcribed from PC Mic: '%s'", user_input)
+
+            await self.bridge.set_led("solid_cyan", brightness=90)
+            await self.stream_response_to_speaker(user_input, speaker_audio=speaker_pcm)
+            await self.bridge.set_led("solid_green", brightness=50)
 
     # ── Wake-word detection loop ─────────────────────────────────────────────
 

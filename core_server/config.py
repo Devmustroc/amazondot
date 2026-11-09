@@ -11,9 +11,9 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Echo Dot Network Configuration
-DOT_HOST = os.getenv("DOT_HOST", "192.168.1.23")
-DOT_MIC_PORT = int(os.getenv("DOT_MIC_PORT", "9000"))
+# Echo Dot Network Configuration (supports both DOT_HOST and ECHO_DOT_IP aliases)
+DOT_HOST = os.getenv("DOT_HOST") or os.getenv("ECHO_DOT_IP", "192.168.1.23")
+DOT_MIC_PORT = int(os.getenv("DOT_MIC_PORT") or os.getenv("ECHO_DOT_PORT", "9000"))
 DOT_PLAY_PORT = int(os.getenv("DOT_PLAY_PORT", "9001"))
 DOT_CTRL_PORT = int(os.getenv("DOT_CTRL_PORT", "9002"))
 
@@ -33,7 +33,8 @@ MAX_RECORDING_SEC = int(os.getenv("MAX_RECORDING_SEC", "10"))
 ASSISTANT_NAME = os.getenv("ASSISTANT_NAME", "Régis")
 FAMILY_ADMIN_NAME = os.getenv("FAMILY_ADMIN_NAME", "El Mustapha")
 FAMILY_CHILD_NAME = os.getenv("FAMILY_CHILD_NAME", "Ismail")
-AUDIO_INPUT_MODE = os.getenv("AUDIO_INPUT_MODE", "echo_dot") # "echo_dot" or "local"
+_local_mode_alias = os.getenv("LOCAL_AUDIO_MODE", "false").lower() in ("true", "1", "yes")
+AUDIO_INPUT_MODE = "local" if _local_mode_alias else os.getenv("AUDIO_INPUT_MODE", "echo_dot") # "echo_dot" or "local"
 WAKE_WORDS = [w.strip().lower() for w in os.getenv("WAKE_WORDS", "régis,regis,regisse,alexa").split(",")]
 WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "alexa") # openWakeWord model for fast fallback
 WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", "0.2"))

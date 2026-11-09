@@ -1,6 +1,6 @@
 # Tutoriel : Créer une Intention Vocale (@intent)
 
-Grâce au registre modulaire d'intentions de SovereignDot ([`core_server/intents/`](file:///home/devmust/Work/amazondot/core_server/intents/)), ajouter une nouvelle compétence vocale ne nécessite plus de modifier le cœur du serveur !  
+Grâce au registre modulaire d'intentions de SovereignDot ([`core_server/intents/`](https://github.com/Devmustroc/amazondot/blob/master/core_server/intents/)), ajouter une nouvelle compétence vocale ne nécessite plus de modifier le cœur du serveur !  
 Il vous suffit de créer un nouveau fichier Python dans le dossier `core_server/intents/` et d'utiliser le décorateur `@intent`.
 
 ---

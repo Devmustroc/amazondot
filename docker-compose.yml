@@ -1,0 +1,33 @@
+# ==============================================================================
+# SovereignDot — Root Docker Compose Configuration
+# ==============================================================================
+
+services:
+  sovereigndot:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: sovereigndot:latest
+    container_name: sovereigndot
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - tad_data:/app/core_server/data
+      - tad_cache:/app/core_server/tts_cache
+      - ./vault:/app/vault
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  tad_data:
+    name: tad_data
+  tad_cache:
+    name: tad_cache

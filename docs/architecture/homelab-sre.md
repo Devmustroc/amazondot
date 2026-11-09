@@ -1,6 +1,6 @@
 # Supervision Homelab & SRE Proxmox
 
-SovereignDot ne se contente pas de vous donner l'heure ou la météo : c'est un véritable **ingénieur SRE vocal** capable d'auditer l'infrastructure de votre Homelab et de piloter votre cluster domestique à la voix ([`core_server/homelab_tools.py`](file:///home/devmust/Work/amazondot/core_server/homelab_tools.py) et [`core_server/mcp_client.py`](file:///home/devmust/Work/amazondot/core_server/mcp_client.py)).
+SovereignDot ne se contente pas de vous donner l'heure ou la météo : c'est un véritable **ingénieur SRE vocal** capable d'auditer l'infrastructure de votre Homelab et de piloter votre cluster domestique à la voix ([`core_server/homelab_tools.py`](https://github.com/Devmustroc/amazondot/blob/master/core_server/homelab_tools.py) et [`core_server/mcp_client.py`](https://github.com/Devmustroc/amazondot/blob/master/core_server/mcp_client.py)).
 
 ---
 

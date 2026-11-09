@@ -199,7 +199,7 @@ cp .env.example .env
 
 Vérifiez que votre fichier `.env` contient :
 ```ini
-LOCAL_AUDIO_MODE=true
+AUDIO_INPUT_MODE=local
 OPENROUTER_API_KEY=votre_cle_optionnelle  # Si omise, Ollama local sera utilisé automatiquement
 ```
 
@@ -210,7 +210,7 @@ python -m core_server.main
 ```
 
 Au premier démarrage, SovereignDot télécharge automatiquement le modèle officiel Piper ONNX en français (63 Mo) et initialise votre coffre de mémoire Markdown dans `./vault/Memory/`.  
-Parlez dans votre micro :
+En Mode Émulateur PC, vous pouvez **soit taper votre question au clavier** dans le terminal, **soit appuyer sur Entrée à vide pour enregistrer 4 secondes depuis votre microphone** :
 
 > **« Régis, quelle heure est-il ? »**  
 > **« Régis, retiens que Ismail adore jouer aux échecs. »**
@@ -226,7 +226,7 @@ Pour déployer SovereignDot comme service permanent sur votre serveur Proxmox, u
 docker compose up -d --build
 
 # Consulter les journaux en direct
-docker compose logs -f sovereign-server
+docker compose logs -f sovereigndot
 ```
 
 ### Lancer la Sonde de Santé Automatisée
@@ -367,15 +367,16 @@ Aucune modification du code central n'est requise ! Votre compétence est enregi
 
 | Variable | Valeur par Défaut | Description |
 | :--- | :--- | :--- |
-| `LOCAL_AUDIO_MODE` | `false` | Activer à `true` pour le Mode Émulateur PC (micro & haut-parleurs de PC). |
-| `ECHO_DOT_IP` | `192.168.1.23` | Adresse IP de votre Echo Dot 2G libéré sur le Wi-Fi local. |
-| `ECHO_DOT_PORT` | `9001` | Port TCP de streaming audio. |
+| `AUDIO_INPUT_MODE` | `echo_dot` | Définir à `local` pour le Mode Émulateur PC ou `echo_dot` pour le mode matériel. |
+| `DOT_HOST` | `192.168.1.23` | Adresse IP de votre Echo Dot 2G libéré sur le Wi-Fi local. |
+| `DOT_MIC_PORT` | `9000` | Port TCP du flux brut 9-canaux des microphones de l'Echo Dot. |
+| `DOT_PLAY_PORT` | `9001` | Port TCP de lecture stéréo 48kHz & contrôle des LEDs sur l'Echo Dot. |
 | `WHISPER_MODEL` | `tiny` | Modèle Faster-Whisper (`tiny`, `base`, `small`). |
 | `WHISPER_BEAM_SIZE`| `1` | Largeur du faisceau Whisper (1 = ultra-rapide <120ms). |
 | `OPENROUTER_API_KEY`| `""` | Clé API OpenRouter pour le streaming Gemini 3.8 Flash. |
 | `OLLAMA_URL` | `http://localhost:11434/api/chat` | Endpoint local Ollama pour les requêtes privées hors-ligne. |
 | `OLLAMA_MODEL` | `qwen2.5:latest` | Nom du modèle Ollama local. |
-| `TTS_VOICE` | `fr-FR-HenriNeural`| Voix neuronale Edge-TTS pour la synthèse en ligne. |
+| `TTS_VOICE` | `fr-FR-VivienneMultilingualNeural`| Voix neuronale Edge-TTS pour la synthèse en ligne. |
 | `PIPER_ENABLED` | `true` | Active le repli vocal hors-ligne Piper ONNX. |
 | `OBSIDIAN_VAULT_PATH`| `./vault/Memory`| Chemin du dossier local des notes Markdown. |
 | `FAMILY_ADMIN_NAME` | `El Mustapha` | Nom du profil administrateur adulte. |

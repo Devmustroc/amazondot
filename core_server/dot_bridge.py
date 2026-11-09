@@ -11,6 +11,7 @@ import asyncio
 import socket
 import logging
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 from core_server import config
@@ -148,11 +149,24 @@ class LocalAudioBridge:
     def __init__(self):
         self.event_queue: asyncio.Queue = asyncio.Queue()
         self._current_player: Optional[subprocess.Popen] = None
+        self._server_sock: Optional[socket.socket] = None
         self._player_bin = self._find_player()
-        logger.info("LocalAudioBridge initialized (Playback binary: %s)", self._player_bin or "None/Dummy")
+        self._recorder_bin = self._find_recorder()
+        logger.info(
+            "LocalAudioBridge initialized (Player: %s, Recorder: %s)",
+            self._player_bin or "None/Dummy",
+            self._recorder_bin or "None",
+        )
 
     def _find_player(self) -> Optional[str]:
         for bin_name in ["pw-play", "paplay", "aplay", "afplay"]:
+            found = shutil.which(bin_name)
+            if found:
+                return found
+        return None
+
+    def _find_recorder(self) -> Optional[str]:
+        for bin_name in ["arecord", "parec", "ffmpeg"]:
             found = shutil.which(bin_name)
             if found:
                 return found
@@ -205,11 +219,38 @@ class LocalAudioBridge:
 
     def open_mic_stream(self) -> socket.socket:
         """
-        Emulates mic stream using arecord or an in-memory loopback socket.
+        Emulates mic stream using an in-memory loopback socket kept alive.
         """
         logger.info("Opening local mic stream emulator...")
-        server_sock, client_sock = socket.socketpair()
+        self._server_sock, client_sock = socket.socketpair()
         return client_sock
+
+    async def record_local_mic(self, duration_sec: float = 4.0) -> bytes:
+        """Records 16kHz 16-bit mono PCM from the local PC microphone."""
+        if not self._recorder_bin:
+            logger.warning("No local audio recorder binary (arecord/parec/ffmpeg) found on system.")
+            return b""
+
+        bin_name = Path(self._recorder_bin).name
+        if bin_name == "arecord":
+            cmd = [self._recorder_bin, "-q", "-f", "S16_LE", "-r", "16000", "-c", "1", "-t", "raw", "-d", str(int(duration_sec))]
+        elif bin_name == "parec":
+            cmd = ["timeout", str(duration_sec), self._recorder_bin, "--format=s16le", "--rate=16000", "--channels=1", "--raw"]
+        else:
+            cmd = [self._recorder_bin, "-loglevel", "quiet", "-f", "alsa", "-i", "default", "-t", str(duration_sec), "-f", "s16le", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-"]
+
+        logger.info("🎙️ Recording from local PC microphone for %.1fs...", duration_sec)
+        loop = asyncio.get_running_loop()
+
+        def _rec() -> bytes:
+            try:
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=duration_sec + 2.0)
+                return res.stdout
+            except Exception as e:
+                logger.error("Local microphone recording error: %s", e)
+                return b""
+
+        return await loop.run_in_executor(None, _rec)
 
 
 def create_audio_bridge() -> DotBridge | LocalAudioBridge:

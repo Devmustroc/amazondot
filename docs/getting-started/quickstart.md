@@ -34,7 +34,7 @@ cp .env.example .env
 Éditez le fichier `.env` pour définir le mode émulateur :
 
 ```ini
-LOCAL_AUDIO_MODE=true
+AUDIO_INPUT_MODE=local
 OPENROUTER_API_KEY=votre_cle_openrouter_optionnelle
 ```
 
@@ -46,7 +46,7 @@ OPENROUTER_API_KEY=votre_cle_openrouter_optionnelle
 python -m core_server.main
 ```
 
-Au premier démarrage, SovereignDot télécharge automatiquement le modèle de synthèse vocale Piper (63 Mo) et initialise votre coffre Obsidian local dans `./vault/Memory/`. Dites simplement :
+Au premier démarrage, SovereignDot télécharge automatiquement le modèle de synthèse vocale Piper (63 Mo) et initialise votre coffre Obsidian local dans `./vault/Memory/`. Vous pouvez **taper votre commande au clavier** ou **appuyer sur Entrée à vide pour enregistrer 4 secondes depuis votre microphone** :
 
 > **« Régis, quelle heure est-il ? »**  
 > **« Régis, qui es-tu ? »**  
@@ -63,7 +63,7 @@ Si vous souhaitez faire tourner le serveur sur votre machine Proxmox, un NAS ou 
 docker compose up -d --build
 
 # Consulter les journaux en direct
-docker compose logs -f sovereign-server
+docker compose logs -f sovereigndot
 ```
 
 Le fichier `docker-compose.yml` est préconfiguré en `network_mode: host` pour permettre l'écoute instantanée sur le port `TCP:9001` de l'Echo Dot.
@@ -75,13 +75,14 @@ Le fichier `docker-compose.yml` est préconfiguré en `network_mode: host` pour 
 Une fois votre Echo Dot jailbreaké (voir le [Guide Hardware](../hardware/echo-dot-2g.md)) :
 
 1. Démarrez l'Echo Dot sur votre réseau Wi-Fi local.
-2. Vérifiez que le daemon `dot_bridge` tourne sur l'Echo Dot (port 9001).
+2. Vérifiez que le daemon `tad_dotd` tourne sur l'Echo Dot (ports 9000/9001).
 3. Définissez l'IP de l'enceinte dans votre fichier `.env` :
 
 ```ini
-ECHO_DOT_IP=192.168.1.23
-ECHO_DOT_PORT=9001
-LOCAL_AUDIO_MODE=false
+AUDIO_INPUT_MODE=echo_dot
+DOT_HOST=192.168.1.23
+DOT_MIC_PORT=9000
+DOT_PLAY_PORT=9001
 ```
 
 4. Lancez le serveur : il se connecte immédiatement au transducteur audio de l'Echo Dot.

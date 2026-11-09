@@ -1,7 +1,7 @@
 # Résilience Réseau & Circuit-Breaker
 
 Un assistant vocal souverain doit rester opérationnel en toutes circonstances, y compris lorsque la connexion Internet de votre domicile est interrompue ou que les services cloud tiers subissent une panne.  
-SovereignDot intègre un sous-système de résilience architecturé selon le pattern **Circuit-Breaker** ([`core_server/resilience.py`](file:///home/devmust/Work/amazondot/core_server/resilience.py)).
+SovereignDot intègre un sous-système de résilience architecturé selon le pattern **Circuit-Breaker** ([`core_server/resilience.py`](https://github.com/Devmustroc/amazondot/blob/master/core_server/resilience.py)).
 
 ---
 

@@ -1,6 +1,6 @@
 # Mémoire Long-Terme Obsidian (Markdown)
 
-Contrairement aux assistants fermés qui stockent vos préférences dans des bases de données opaques sur des serveurs distants, SovereignDot utilise une approche **100% transparente, durable et interopérable** : vos souvenirs vocaux sont rédigés directement sous forme de notes **Markdown** lisibles dans votre coffre **Obsidian** ([`core_server/obsidian_memory.py`](file:///home/devmust/Work/amazondot/core_server/obsidian_memory.py)).
+Contrairement aux assistants fermés qui stockent vos préférences dans des bases de données opaques sur des serveurs distants, SovereignDot utilise une approche **100% transparente, durable et interopérable** : vos souvenirs vocaux sont rédigés directement sous forme de notes **Markdown** lisibles dans votre coffre **Obsidian** ([`core_server/obsidian_memory.py`](https://github.com/Devmustroc/amazondot/blob/master/core_server/obsidian_memory.py)).
 
 ---
 

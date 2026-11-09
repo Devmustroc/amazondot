@@ -53,7 +53,7 @@ Le haut-parleur intégré de 35 mm de l'Amazon Echo Dot 2G est conçu pour fonct
 1. Les sous-basses (< 200 Hz) font talonner la membrane du transducteur, provoquant d'importants bruits de claquement et de distorsion harmonique (THD > 10%).
 2. Les crêtes au-delà de 0 dBFS saturent l'étage de sortie.
 
-Dans [`core_server/tts/audio_filter.py`](file:///home/devmust/Work/amazondot/core_server/tts/audio_filter.py), SovereignDot applique un traitement DSP matériel sur chaque paquet audio :
+Dans [`core_server/tts/audio_filter.py`](https://github.com/Devmustroc/amazondot/blob/master/core_server/tts/audio_filter.py), SovereignDot applique un traitement DSP matériel sur chaque paquet audio :
 
 1. **Suréchantillonnage polyphase** vers le taux d'échantillonnage matériel natif du DAC (48 000 Hz).
 2. **Filtre passe-haut Butterworth du 2nd ordre** à **220 Hz** pour couper les fréquences nocives pour la membrane.

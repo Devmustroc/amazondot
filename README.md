@@ -199,7 +199,7 @@ cp .env.example .env
 
 Ensure the following is set in your `.env`:
 ```ini
-LOCAL_AUDIO_MODE=true
+AUDIO_INPUT_MODE=local
 OPENROUTER_API_KEY=your_key_here  # Optional: local Ollama will be used if omitted
 ```
 
@@ -210,7 +210,7 @@ python -m core_server.main
 ```
 
 At first launch, SovereignDot automatically downloads the official Piper ONNX model (63 MB) and initializes your local Markdown memory vault in `./vault/Memory/`.  
-Speak into your microphone:
+In PC Emulator Mode, you can either **type your voice prompt directly** in the terminal or **press Enter empty to record 4 seconds from your laptop microphone**:
 
 > **"Régis, quelle heure est-il ?"**  
 > **"Régis, retiens que Ismail adore jouer aux échecs."**
@@ -226,7 +226,7 @@ To run SovereignDot as a persistent daemon on your Proxmox server, NAS, or home 
 docker compose up -d --build
 
 # Inspect real-time logs
-docker compose logs -f sovereign-server
+docker compose logs -f sovereigndot
 ```
 
 ### Run Automated Healthcheck
@@ -367,15 +367,16 @@ No core code changes needed! Your skill is registered automatically at boot.
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| `LOCAL_AUDIO_MODE` | `false` | Set to `true` for PC Emulator Mode (laptop mic & speakers). |
-| `ECHO_DOT_IP` | `192.168.1.23` | IP address of your jailbroken Echo Dot 2G on the local WiFi. |
-| `ECHO_DOT_PORT` | `9001` | TCP audio streaming port. |
+| `AUDIO_INPUT_MODE` | `echo_dot` | Set to `local` for PC Emulator Mode or `echo_dot` for hardware mode. |
+| `DOT_HOST` | `192.168.1.23` | IP address of your jailbroken Echo Dot 2G on the local WiFi. |
+| `DOT_MIC_PORT` | `9000` | TCP port for raw 9-channel microphone stream from Echo Dot. |
+| `DOT_PLAY_PORT` | `9001` | TCP port for 48kHz stereo playback & LED control on Echo Dot. |
 | `WHISPER_MODEL` | `tiny` | Faster-Whisper model (`tiny`, `base`, `small`). |
 | `WHISPER_BEAM_SIZE`| `1` | Whisper beam search width (1 = ultra-fast <120ms). |
 | `OPENROUTER_API_KEY`| `""` | OpenRouter API key for Gemini 3.8 Flash streaming. |
 | `OLLAMA_URL` | `http://localhost:11434/api/chat` | Local Ollama endpoint for private offline queries. |
 | `OLLAMA_MODEL` | `qwen2.5:latest` | Local Ollama model name. |
-| `TTS_VOICE` | `fr-FR-HenriNeural`| Edge-TTS neural voice for online synthesis. |
+| `TTS_VOICE` | `fr-FR-VivienneMultilingualNeural`| Edge-TTS neural voice for online synthesis. |
 | `PIPER_ENABLED` | `true` | Enables offline Piper ONNX neural TTS fallback. |
 | `OBSIDIAN_VAULT_PATH`| `./vault/Memory`| Path to local Markdown memory notes directory. |
 | `FAMILY_ADMIN_NAME` | `El Mustapha` | Name of the adult administrator profile. |

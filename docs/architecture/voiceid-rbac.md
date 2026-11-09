@@ -1,7 +1,7 @@
 # Biométrie Vocale VoiceID & RBAC Sécurisé
 
 Dans un foyer connecté, tous les utilisateurs n'ont pas les mêmes droits. Un enfant ne doit pas pouvoir éteindre une machine virtuelle Proxmox ou consulter les mots de passe du gestionnaire familial, tandis qu'un invité ne doit pas accéder aux notes privées.  
-SovereignDot intègre un moteur biométrique vocal natif couplé à un système de contrôle d'accès basé sur les rôles (**RBAC**), localisé dans [`core_server/voice_id.py`](file:///home/devmust/Work/amazondot/core_server/voice_id.py).
+SovereignDot intègre un moteur biométrique vocal natif couplé à un système de contrôle d'accès basé sur les rôles (**RBAC**), localisé dans [`core_server/voice_id.py`](https://github.com/Devmustroc/amazondot/blob/master/core_server/voice_id.py).
 
 ---
 
